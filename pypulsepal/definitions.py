@@ -117,6 +117,7 @@ PARAM_DTYPE_MODEL_2 = {
     "triggerMode": "uint8",  # parma 128
 }
 PULSEPAL_CYCLE_FREQUENCY = 20000
+VOLTAGE_PARAM_NAMES = {"phase1Voltage", "phase2Voltage", "restingVoltage"}
 PARAM_SCALING = {
     "isBiphasic": 1,
     "phase1Voltage": 1,
