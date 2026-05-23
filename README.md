@@ -3,123 +3,111 @@
 [![PyPI](https://img.shields.io/pypi/v/pypulsepal.svg)](https://pypi.org/project/pypulsepal)
 [![Wheel](https://img.shields.io/pypi/wheel/pypulsepal.svg)](https://pypi.org/project/pypulsepal)
 [![Contributions](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)](https://github.com/larsrollik/pypulsepal/blob/main/CONTRIBUTING.md)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 
 # PyPulsePal
 Python API for the PulsePal open-source pulse train generator
+
 ---
-Version: "0.1.0"
 
 This package provides an API to the [PulsePal] hardware.
-This API is a re-implementation of the original [PulsePal Python 3 API] that draws from the `pybpod-api` communication protoool.
+Parameters are represented as validated Pydantic v2 models and can be saved/loaded as JSON or YAML files.
+The ArCOM serial communication layer is vendored from [pybpod-api].
 
 ## Example usage
 
-#### script/function
+#### Basic usage
 ```python
 import time
 from pypulsepal import PulsePal
 
-serial_port = "/dev/ttyACM0"  # for unix or "COM"-style port names for Windows
+pp = PulsePal(serial_port="/dev/ttyACM0")
 
-# Create PulsePal object
-pp = PulsePal(serial_port=serial_port)
+# Set a parameter on one channel
+pp.program_one_param(channel=2, param_name="phase1Duration", param_value=0.002)
 
-# Set parameters
-
-## Manually
-pp.program_one_param(channel=2, param_name="phase1Duration", param_value=.002)
-
-## Via convencience functions
+# Or set via convenience method
 pp.set_resting_voltage(channel=2, voltage=4.2)
 
-# Upload parameters
+# Upload all channel configs to device
 pp.upload_all()
 
 # Trigger selected channels
 pp.trigger_selected_channels(channel_2=True, channel_4=True)
-
 time.sleep(1)
 
-# Stop outputs
 pp.stop_all_outputs()
-
-time.sleep(1)
-
-# Save settings (also done automatically on disconnect)
 pp.save_settings()
-
-
 ```
 
-##### Channels can also be triggered all at once
-```python
-import time
-from pypulsepal import PulsePal
-
-serial_port = "/dev/ttyACM0"  # for unix or "COM"-style port names for Windows
-
-# Create PulsePal object
-pp = PulsePal(serial_port=serial_port)
-
-# Trigger all channels
-pp.trigger_all_channels()
-
-time.sleep(1)
-
-# Stop outputs
-pp.stop_all_outputs()
-
-```
-
-#### as context manager
+#### Context manager
 ```python
 import time
 from pypulsepal import PulsePal
 
 with PulsePal(serial_port="/dev/ttyACM0") as pp:
-    # set params
     pp.upload_all()
-
-    # do something
     time.sleep(2)
-
 ```
 
-#### Write `default` params to all channels
-
+#### Pydantic config models
 ```python
-from pypulsepal.write_tests import write_default_settings
+from pypulsepal.models import ChannelConfig, PulsePalConfig
 
-write_default_settings(serial_port="/dev/ttyACM0")
+# Build a config
+cfg = PulsePalConfig()
+cfg.channels[0].phase1Duration = 0.002
+cfg.channels[0].phase1Voltage = 5.0
 
+# Validation is enforced
+cfg.channels[0].phase1Voltage = 15.0  # raises ValidationError (> 10 V)
 ```
 
-#### Write (funky) `test` params to all channels
-
+#### JSON / YAML config files
 ```python
-from pypulsepal.write_tests import write_test_settings_for_manual_check
+from pypulsepal import PulsePal
 
-write_test_settings_for_manual_check(serial_port="/dev/ttyACM0")
+pp = PulsePal(serial_port="/dev/ttyACM0")
 
+# Save current config
+pp.save_config("my_params.json")   # or .yaml / .yml
+
+# Load config and upload
+pp.load_config("my_params.json")
+pp.sync_all_params()
 ```
 
+#### Load config without connecting
+```python
+from pypulsepal import PulsePal
+from pypulsepal.config_io import load_config
+
+cfg = load_config("my_params.json")
+pp = PulsePal.from_config(cfg, serial_port="/dev/ttyACM0")
+```
+
+#### Reset device to defaults
+```python
+pp.reset_to_defaults()   # resets all channel and trigger configs and syncs to device
+```
 
 ## Installation
-#### pip
+
 ```shell
 pip install pypulsepal
 ```
-#### git
+
+With YAML support:
+```shell
+pip install "pypulsepal[yaml]"
+```
+
+From source:
 ```shell
 git clone https://github.com/larsrollik/pypulsepal.git
 cd pypulsepal/
-pip install -e .
-```
-#### pip + git
-```shell
-pip install git+https://github.com/larsrollik/pypulsepal.git
+pip install -e ".[yaml]"
 ```
 
 ## Problems & issues
@@ -149,7 +137,7 @@ This software is released under the **[GNU GPL v3.0](https://github.com/larsroll
 
 This work is derived from the [Sanworks PulsePal Python API](https://github.com/sanworks/PulsePal/tree/develop) ([commit: 5bb189f](https://github.com/sanworks/PulsePal/commit/5bb189fec8d7435433b8c23f7bae520f92e271af)).
 
-The architecture of the API is imported and inspired by the `pybpodapi.com.arcom` module from the [pybpod-api](https://github.com/pybpod/pybpod-api).
+The serial communication layer (`_arcom.py`) is vendored from [pybpod-api] 1.8.2 (MIT, Copyright © 2016 Champalimaud Foundation) with minor adaptations.
 
 For changes from the original implementation, see the git history since [commit 972bc1e](https://github.com/larsrollik/pypulsepal/commit/972bc1ed3d07b6809e6cbcd05373be3b76ae5b5b).
 
@@ -162,17 +150,10 @@ For changes from the original implementation, see the git history since [commit 
 - [PulsePal param definitions]
 
 
-## TODO
-- [ ] Simplify parameter dicts in `definitions`: into nested dict with first level for name, then standard sub-dict (default value, dtype, dtype legacy(model 1), scaling, )
-- [ ] Complete API functions with all PulsePal opcodes, e.g. for Arduino logic levels (see [PulsePal USB v2 opcode list])
-- [ ] Move PulsePal hardware settings to init and remove defaults for easier upgrade in future
-- [ ] API function to accept list of dicts (from json settings file)
-  - to make overwrites on channels to get from value-based logic to channel parameter sets
-  - add write function to save all settings to json for documentation
-
 [//]: # (links)
 [Pulsepal]: https://github.com/sanworks/PulsePal
 [PyBpod]: https://github.com/pybpod/pybpod
+[pybpod-api]: https://github.com/pybpod/pybpod-api
 [PyBpod com ArCOM]: https://github.com/pybpod/pybpod-api/blob/master/pybpodapi/com/arcom.py
 [PyBpod com protocol]: https://github.com/pybpod/pybpod-api/blob/master/pybpodapi/bpod/bpod_com_protocol.py
 [PyBpod message headers]: https://github.com/pybpod/pybpod-api/blob/master/pybpodapi/com/protocol/send_msg_headers.py
