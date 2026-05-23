@@ -13,7 +13,7 @@ import serial
 logger = logging.getLogger(__name__)
 
 
-class DataType(object):
+class DataType:
     def __init__(self, name, size):
         self.name = name
         self.size = size
@@ -22,7 +22,7 @@ class DataType(object):
         return self.name
 
 
-class ArduinoTypes(object):
+class ArduinoTypes:
     BYTE = DataType("byte", 1)
     CHAR = DataType("char", 1)
     UINT8 = DataType("uint8", 1)
@@ -85,7 +85,7 @@ class ArduinoTypes(object):
         return struct.unpack("<Q", message_bytes)[0]
 
 
-class ArCOM(object):
+class ArCOM:
     """ArCOM is an interface to simplify data transactions between Arduino and Python."""
 
     def open(self, serial_port, baudrate=115200, timeout=1):
@@ -133,7 +133,9 @@ class ArCOM(object):
         )
 
     def read_float32(self):
-        return struct.unpack("<f", self.serial_object.read(ArduinoTypes.FLOAT32.size))[0]
+        return struct.unpack("<f", self.serial_object.read(ArduinoTypes.FLOAT32.size))[
+            0
+        ]
 
     def read_bytes_array(self, array_len=1):
         return [self.read_byte() for _ in range(array_len)]

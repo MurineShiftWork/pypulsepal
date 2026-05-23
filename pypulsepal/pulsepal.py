@@ -1,7 +1,6 @@
 import logging
 
 from pypulsepal._arcom import ArCOM
-
 from pypulsepal.definitions import (
     CUSTOM_PULSE_TRAIN_OPCODES,
     PARAM_DTYPE_MODEL_1,
