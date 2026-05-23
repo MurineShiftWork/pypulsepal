@@ -340,10 +340,13 @@ class PulsePal:
         else:  # model 1: voltages are uint8 and packed into the 8-bit section
             program_values_16 = None
             program_values_8 = []
+
+            def v2b(v: float) -> int:
+                return int(volts_to_bytes(volt=v, dac_bitMax=self.dac_bitMax))
+
             for channel in range(self.nr_output_channels):
                 cfg = self.channel_configs[channel]
                 program_values_8.append(int(cfg.isBiphasic))
-                v2b = lambda v: int(volts_to_bytes(volt=v, dac_bitMax=self.dac_bitMax))  # noqa: E731
                 program_values_8.append(v2b(cfg.phase1Voltage))
                 program_values_8.append(v2b(cfg.phase2Voltage))
                 program_values_8.append(int(cfg.customTrainID))
