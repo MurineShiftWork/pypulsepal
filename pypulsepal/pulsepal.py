@@ -521,7 +521,6 @@ class PulsePal:
             encode_message(SendMessageHeader.ABORT_ALL, encoding=ENCODING_UINT8),
         ]
         self._arcom.write_array(b"".join(message))
-        return self._read_confirmation()
 
     def save_settings(self):
         """"""
