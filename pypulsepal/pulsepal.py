@@ -1,6 +1,6 @@
 import logging
 
-from pybpodapi.com.arcom import ArCOM
+from pypulsepal._arcom import ArCOM
 
 from pypulsepal.definitions import (
     CUSTOM_PULSE_TRAIN_OPCODES,
