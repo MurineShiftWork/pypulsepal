@@ -99,6 +99,20 @@ class PulsePal:
         instance.sync_all_params()
         return instance
 
+    def load_config(self, path) -> None:
+        """Load channel/trigger configs from a JSON or YAML file and apply in memory."""
+        from pypulsepal.config_io import load_config
+
+        cfg = load_config(path)
+        self.channel_configs = [ch.model_copy() for ch in cfg.channels]
+        self.trigger_configs = [tr.model_copy() for tr in cfg.triggers]
+
+    def save_config(self, path) -> None:
+        """Save current channel/trigger configs to a JSON or YAML file."""
+        from pypulsepal.config_io import save_config
+
+        save_config(self.config, path)
+
     def reset_to_defaults(self) -> None:
         self.channel_configs = [ChannelConfig() for _ in range(self.nr_output_channels)]
         self.trigger_configs = [

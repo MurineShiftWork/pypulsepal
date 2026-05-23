@@ -23,6 +23,7 @@ Homepage = "https://github.com/larsrollik/pypulsepal"
 "Issue Tracker" = "https://github.com/larsrollik/pypulsepal/issues"
 
 [project.optional-dependencies]
+yaml = ["pyyaml"]
 dev = [
     "pytest",
     "pytest-cov",
