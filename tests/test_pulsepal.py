@@ -1,7 +1,10 @@
+import struct
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 
+from pypulsepal.definitions import PULSEPAL_CYCLE_FREQUENCY
 from pypulsepal.models import ChannelConfig, PulsePalConfig, TriggerConfig
 from pypulsepal.pulsepal import PulsePal
 
@@ -162,3 +165,120 @@ class TestFromConfig:
     def test_returns_pulsepal_instance(self):
         pp, _ = _make_pp(config=PulsePalConfig())
         assert isinstance(pp, PulsePal)
+
+
+def _make_sd_payload(channels=None, triggers=None) -> bytes:
+    """Build a synthetic 178-byte SD payload matching the firmware byte layout."""
+    time_names = [
+        "phase1Duration",
+        "interPhaseInterval",
+        "phase2Duration",
+        "interPulseInterval",
+        "burstDuration",
+        "interBurstInterval",
+        "pulseTrainDuration",
+        "pulseTrainDelay",
+    ]
+    if channels is None:
+        channels = [ChannelConfig() for _ in range(4)]
+    if triggers is None:
+        triggers = [TriggerConfig() for _ in range(2)]
+
+    buf = b""
+    for cfg in channels:
+        for name in time_names:
+            cycles = int(getattr(cfg, name) * PULSEPAL_CYCLE_FREQUENCY)
+            buf += struct.pack("<I", cycles)
+        buf += bytes([int(cfg.isBiphasic)])
+        for name in ("phase1Voltage", "phase2Voltage", "restingVoltage"):
+            v = getattr(cfg, name)
+            bits = int(np.ceil(((v + 10) / 20.0) * 65535))
+            buf += struct.pack("<H", bits)
+        buf += bytes([cfg.customTrainID, cfg.customTrainTarget, cfg.customTrainLoop])
+    for tr in triggers:
+        buf += bytes([tr.triggerMode, 1, 0, 0, 0])
+
+    assert len(buf) == 178
+    return buf
+
+
+class TestSDMethods:
+    def test_save_to_sd_no_ack_read(self, pp_and_arcom):
+        pp, mock_arcom = pp_and_arcom
+        mock_arcom.read_uint8.reset_mock()
+        with patch("pypulsepal.pulsepal.time.sleep"):
+            pp.save_to_sd()
+        mock_arcom.read_uint8.assert_not_called()
+
+    def test_save_to_sd_sends_settings_opcode(self, pp_and_arcom):
+        pp, mock_arcom = pp_and_arcom
+        with patch("pypulsepal.pulsepal.time.sleep"):
+            pp.save_to_sd(filename="test.pps")
+        written = mock_arcom.serial_object.write.call_args[0][0]
+        assert bytes([90]) in written  # opcode 90 = SETTINGS
+
+    def test_save_to_sd_encodes_filename(self, pp_and_arcom):
+        pp, mock_arcom = pp_and_arcom
+        with patch("pypulsepal.pulsepal.time.sleep"):
+            pp.save_to_sd(filename="test.pps")
+        written = mock_arcom.serial_object.write.call_args[0][0]
+        assert b"test.pps" in written
+
+    def test_save_to_sd_sleeps(self, pp_and_arcom):
+        pp, _ = pp_and_arcom
+        with patch("pypulsepal.pulsepal.time.sleep") as mock_sleep:
+            pp.save_to_sd()
+        mock_sleep.assert_called_once_with(0.1)
+
+    def test_read_sd_params_returns_none_on_bad_length(self, pp_and_arcom):
+        pp, mock_arcom = pp_and_arcom
+        mock_arcom.serial_object.read.return_value = b"\x00" * 10
+        with patch("pypulsepal.pulsepal.time.sleep"):
+            result = pp.read_sd_params()
+        assert result is None
+
+    def test_read_sd_params_sends_opcode_85(self, pp_and_arcom):
+        pp, mock_arcom = pp_and_arcom
+        mock_arcom.serial_object.read.return_value = _make_sd_payload()
+        with patch("pypulsepal.pulsepal.time.sleep"):
+            pp.read_sd_params()
+        written = mock_arcom.serial_object.write.call_args[0][0]
+        assert bytes([85]) in written
+
+    def test_read_sd_params_default_config(self, pp_and_arcom):
+        pp, mock_arcom = pp_and_arcom
+        channels = [ChannelConfig() for _ in range(4)]
+        mock_arcom.serial_object.read.return_value = _make_sd_payload(channels=channels)
+        with patch("pypulsepal.pulsepal.time.sleep"):
+            result = pp.read_sd_params()
+        assert result is not None
+        assert abs(result["phase1Duration"][0] - 0.001) < 1e-6
+        assert abs(result["phase1Voltage"][0] - 5.0) < 0.01
+        assert abs(result["restingVoltage"][0] - 0.0) < 0.01
+
+    def test_read_sd_params_custom_voltage(self, pp_and_arcom):
+        pp, mock_arcom = pp_and_arcom
+        channels = [ChannelConfig(phase1Voltage=3.0)] + [ChannelConfig()] * 3
+        mock_arcom.serial_object.read.return_value = _make_sd_payload(channels=channels)
+        with patch("pypulsepal.pulsepal.time.sleep"):
+            result = pp.read_sd_params()
+        assert result is not None
+        assert abs(result["phase1Voltage"][0] - 3.0) < 0.01
+        assert abs(result["phase1Voltage"][1] - 5.0) < 0.01  # other channels default
+
+    def test_read_sd_params_trigger_mode(self, pp_and_arcom):
+        pp, mock_arcom = pp_and_arcom
+        triggers = [TriggerConfig(triggerMode=1), TriggerConfig(triggerMode=2)]
+        mock_arcom.serial_object.read.return_value = _make_sd_payload(triggers=triggers)
+        with patch("pypulsepal.pulsepal.time.sleep"):
+            result = pp.read_sd_params()
+        assert result["triggerMode"] == [1, 2]
+
+    def test_read_sd_params_all_channels_parsed(self, pp_and_arcom):
+        pp, mock_arcom = pp_and_arcom
+        channels = [ChannelConfig(phase1Voltage=float(i)) for i in range(4)]
+        mock_arcom.serial_object.read.return_value = _make_sd_payload(channels=channels)
+        with patch("pypulsepal.pulsepal.time.sleep"):
+            result = pp.read_sd_params()
+        for i in range(4):
+            assert abs(result["phase1Voltage"][i] - float(i)) < 0.01

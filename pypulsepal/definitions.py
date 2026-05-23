@@ -162,6 +162,8 @@ class SendMessageHeader:
 
     CLIENT_ID = 89  # 6 char, e.g. python/matlab
 
+    READ_SD = 85
+
     SETTINGS = 90
 
     LOGIC_SET = 86

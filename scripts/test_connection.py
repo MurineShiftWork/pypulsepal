@@ -25,8 +25,6 @@ Read-back requires: program → save to SD (opcode 90 op 1) → read SD (opcode 
 import sys
 import time
 
-import numpy as np
-
 
 def _check(label, result):
     status = "OK" if result else "FAIL"
@@ -34,123 +32,6 @@ def _check(label, result):
     if not result:
         print("       ^ stopping here")
         sys.exit(1)
-
-
-def _save_to_sd(pp, filename="test.pps"):
-    """Save current RAM params to SD card via opcode 90 op 1.
-
-    Firmware note: op 1 sends NO confirmation byte back — confirmBit is
-    declared but never written to serial in the firmware source.
-    """
-    from pypulsepal.utils import encode_message
-
-    ENCODING_UINT8 = "uint8"
-    name_bytes = filename.encode("ascii")
-    msg = (
-        pp.encoded_opcode
-        + encode_message(90, encoding=ENCODING_UINT8)
-        + encode_message(1, encoding=ENCODING_UINT8)  # op 1 = save
-        + encode_message(len(name_bytes), encoding=ENCODING_UINT8)
-        + name_bytes
-    )
-    pp._arcom.serial_object.write(msg)
-    time.sleep(0.1)  # give SD write time to complete — no ack byte is sent
-
-
-def _read_sd_params(pp):
-    """
-    Read 178-byte SD card parameter file via opcode 85 and parse it.
-    Returns parsed dict or None. Prints raw bytes on unexpected length.
-
-    SD file layout from SaveCurrentProgram2SD() — per channel (42 bytes × 4 = 168):
-      8 × uint32  phase1Duration, interPhaseInterval, phase2Duration,
-                  interPulseInterval, burstDuration, burstInterval,
-                  pulseTrainDuration, pulseTrainDelay
-      uint8       isBiphasic
-      uint16      phase1Voltage
-      uint16      phase2Voltage
-      uint16      restingVoltage
-      uint8       customTrainID
-      uint8       customTrainTarget
-      uint8       customTrainLoop
-    Then per trigger channel (5 bytes × 2 = 10):
-      uint8       triggerMode
-      4 × uint8   triggerAddress[0..3]  (output channel link flags)
-    Total: 168 + 10 = 178 bytes (252 validation byte is byte 179, not streamed)
-    """
-    from pypulsepal.definitions import PULSEPAL_CYCLE_FREQUENCY
-    from pypulsepal.utils import encode_message
-
-    ENCODING_UINT8 = "uint8"
-
-    msg = pp.encoded_opcode + encode_message(85, encoding=ENCODING_UINT8)
-    pp._arcom.serial_object.write(msg)
-
-    time.sleep(0.1)
-    raw = pp._arcom.serial_object.read(178)
-
-    print(f"  [DEBUG] opcode 85 returned {len(raw)} bytes")
-    if len(raw) > 0:
-        hex_str = raw.hex()
-        print(f"  [DEBUG] raw hex: {hex_str[:80]}{'...' if len(hex_str) > 80 else ''}")
-
-    if len(raw) != 178:
-        print(f"  [WARN] expected 178 bytes, got {len(raw)} — skipping parse")
-        return None
-
-    time_names = [
-        "phase1Duration",
-        "interPhaseInterval",
-        "phase2Duration",
-        "interPulseInterval",
-        "burstDuration",
-        "burstInterval",
-        "pulseTrainDuration",
-        "pulseTrainDelay",
-    ]
-
-    result = {n: [] for n in time_names}
-    result.update({n: [] for n in ["phase1Voltage", "phase2Voltage", "restingVoltage"]})
-    result.update(
-        {
-            n: []
-            for n in [
-                "isBiphasic",
-                "customTrainID",
-                "customTrainTarget",
-                "customTrainLoop",
-            ]
-        }
-    )  # noqa: E501
-    result["triggerMode"] = []
-    result["triggerAddress"] = []
-
-    offset = 0
-    for _ch in range(4):
-        for name in time_names:
-            val = int(np.frombuffer(raw[offset : offset + 4], dtype="<u4")[0])
-            result[name].append(val / PULSEPAL_CYCLE_FREQUENCY)
-            offset += 4
-        result["isBiphasic"].append(raw[offset])
-        offset += 1
-        for name in ["phase1Voltage", "phase2Voltage", "restingVoltage"]:
-            bits = int(np.frombuffer(raw[offset : offset + 2], dtype="<u2")[0])
-            result[name].append(round((bits / 65535.0) * 20.0 - 10.0, 4))
-            offset += 2
-        result["customTrainID"].append(raw[offset])
-        offset += 1
-        result["customTrainTarget"].append(raw[offset])
-        offset += 1
-        result["customTrainLoop"].append(raw[offset])
-        offset += 1
-
-    for _trig in range(2):
-        result["triggerMode"].append(raw[offset])
-        offset += 1
-        result["triggerAddress"].append(list(raw[offset : offset + 4]))
-        offset += 4
-
-    return result
 
 
 def run(port):
@@ -222,12 +103,13 @@ def run(port):
     # ------------------------------------------------------------------
     print("\n5. Device read-back (save to SD then opcode 85)")
     print("  saving current RAM params to SD card (opcode 90 op 1) ...")
-    _save_to_sd(pp, filename="test.pps")
+    pp.save_to_sd(filename="test.pps")
     print("  [OK] save to SD sent (no ack expected per firmware)")
 
     print("  reading back from SD (opcode 85) ...")
-    device = _read_sd_params(pp)
+    device = pp.read_sd_params()
     if device is not None:
+        print(f"  [DEBUG] opcode 85 returned data for {len(device['phase1Voltage'])} channels")
         d_volt = device["phase1Voltage"][0]
         _check(
             f"  device phase1Voltage ch0 == 2.0V (got {d_volt})",
