@@ -1,51 +1,108 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pypulsepal"
+dynamic = ["version"]
+description = "PyPulsePal: Python API for the PulsePal open-source pulse train generator"
+readme = "README.md"
+license = {text = "GPLv3"}
+authors = [
+    {name = "Lars B. Rollik", email = "L.B.Rollik@protonmail.com"},
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pyserial",
+    "numpy",
+    "pydantic>=2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/larsrollik/pypulsepal"
+"Issue Tracker" = "https://github.com/larsrollik/pypulsepal/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pre-commit",
+    "ruff",
+    "mypy",
+    "commitizen",
+]
+
+[project.scripts]
+pulsepal = "pypulsepal:run"
+
+# ---------------------------------------------------------------------------
+# Build
+# ---------------------------------------------------------------------------
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.1.0"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pypulsepal"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/pypulsepal", "/tests", "/README.md", "/LICENSE", "/pyproject.toml"]
+
+# ---------------------------------------------------------------------------
+# Commitizen
+# ---------------------------------------------------------------------------
+# Release flow: cz bump → updates [tool.commitizen] version + VERSION file,
+#               creates "bump: ..." commit and annotated tag v{version}.
+#   git push && git push --tags → triggers release CI.
+#
+# Note: prior tags used no "v" prefix (0.1.0). New releases use v prefix (v0.2.0).
+# hatch-vcs finds both conventions via setuptools-scm PEP 440 matching.
+#
+# Commit types that drive version bumps:
+#   feat:                     → minor  (0.2.0)
+#   fix:                      → patch  (0.1.1)
+#   feat!: / BREAKING CHANGE: → major  (1.0.0)
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+tag_format = "v$version"
+update_changelog_on_bump = false
+version_files = ["VERSION"]
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# ---------------------------------------------------------------------------
+# Ruff
+# ---------------------------------------------------------------------------
 
 [tool.ruff]
 line-length = 88
 indent-width = 4
-include = ["*.py", "*.pyi"]
-extend-exclude = [
-    "*.eggs",
-    "*.git",
-    "*.hg",
-    "*.mypy_cache",
-    "*.tox",
-    "*.venv",
-    "*_build",
-    "*buck-out",
-    "*build",
-    "*dist",
-]
+exclude = ["scripts"]
 
 [tool.ruff.lint]
-select = [
-    "E",
-    "W",
-    "F",
-    "I",
-    "UP",
-    "YTT",
-    "SIM",
-    "PTH",
-    "TCH",
-    "PYI",
-]
-ignore = []
+select = ["E", "W", "F", "I", "UP", "YTT", "SIM", "PTH", "TCH", "PYI"]
 fixable = ["ALL"]
-unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"pypulsepal/_arcom.py" = ["E501"]  # vendored file — do not reformat
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
-docstring-code-format = true
-docstring-code-line-length = "dynamic"
 
-[tool.ruff.lint.pydocstyle]
-convention = "numpy"
+# ---------------------------------------------------------------------------
+# Mypy
+# ---------------------------------------------------------------------------
 
 [tool.mypy]
 warn_return_any = false

@@ -1,5 +1,11 @@
 __author__ = "Lars B. Rollik"
-__version__ = "0.1.0"
+
+try:
+    from importlib.metadata import version
+
+    __version__ = version("pypulsepal")
+except Exception:
+    __version__ = "0.1.0"
 
 from pypulsepal.pulsepal import PulsePal as PulsePal
 

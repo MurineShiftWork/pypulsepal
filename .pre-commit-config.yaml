@@ -1,28 +1,35 @@
 # Update versions with: pre-commit autoupdate
 repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.3
+    rev: v0.9.0
     hooks:
       - id: ruff
-        args:
-          - "--fix"
-          - "--show-fixes"
+        args: [--fix]
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
+    rev: v1.14.0
     hooks:
       - id: mypy
-        additional_dependencies: ["types-toml"]
+        additional_dependencies: [pydantic>=2.0, pyserial]
 
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.1.0
     hooks:
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
-      - id: check-case-conflict
-      - id: check-merge-conflict
-      - id: check-yaml
-        args: ["--unsafe"]
-      - id: detect-private-key
-      - id: check-added-large-files
+      - id: commitizen
+        stages: [commit-msg]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.3
+    hooks:
+      - id: gitleaks
