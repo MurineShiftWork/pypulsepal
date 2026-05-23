@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import struct
 import time
@@ -190,18 +191,25 @@ class PulsePal:
                 f"Could not connect PulsePal at '{serial_port}' "
                 f"with baudrate {baudrate}"
             )
+        self._pulsepal_set_display(row1="PyPulsePal", row2="")
         return self
 
-    def _pulsepal_set_display(self, message="--> Py"):
-        """"""
-        message_ascii = [ord(s) for s in message]
-        self._arcom.write_array(
-            *[
-                self.encoded_opcode,
-                encode_message(SendMessageHeader.DISPLAY, encoding=ENCODING_UINT8),
-                *message_ascii,
-            ]
+    def _pulsepal_set_display(self, row1: str = "", row2: str = "") -> None:
+        """Set PulsePal LCD display text (opcode 78). Each row is max 16 chars."""
+        if self._arcom is None:
+            return
+
+        def _pad(s: str) -> bytes:
+            b = s[:16].encode("ascii")
+            return b + bytes(16 - len(b))
+
+        msg = (
+            self.encoded_opcode
+            + encode_message(SendMessageHeader.DISPLAY, encoding=ENCODING_UINT8)
+            + _pad(row1)
+            + _pad(row2)
         )
+        self._arcom.write_array(msg)
 
     def _update_param(self, channel, param_name, param_value):
         if param_name in ChannelConfig.model_fields:
@@ -561,16 +569,25 @@ class PulsePal:
         ]
         self._arcom.write_array(b"".join(message))
 
-    def save_settings(self):
-        """"""
+    def save_settings(self) -> bool:
+        """Send disconnect opcode (81) to save current params on device.
+
+        Firmware sends no ack byte for this opcode — confirmed on model 2 fw21.
+        Returns False if not connected or port is closed.
+        """
         if self._arcom is None:
+            return False
+        try:
+            if not self._arcom.serial_object.isOpen():
+                return False
+        except Exception:
             return False
         message = [
             self.encoded_opcode,
             encode_message(SendMessageHeader.DISCONNECT, encoding=ENCODING_UINT8),
         ]
         self._arcom.write_array(b"".join(message))
-        return self._read_confirmation()  # fixme: returns False
+        return True
 
     def save_to_sd(self, filename: str = "default.pps") -> None:
         """Save current RAM params to SD card (opcode 90, op 1).
@@ -678,6 +695,8 @@ class PulsePal:
             self._arcom.close()
 
     def __del__(self):
-        self.save_settings()
+        with contextlib.suppress(Exception):
+            self.save_settings()
         if self._arcom is not None:
-            self._arcom.close()
+            with contextlib.suppress(Exception):
+                self._arcom.close()
