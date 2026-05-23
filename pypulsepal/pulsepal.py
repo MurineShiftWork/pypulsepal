@@ -1,4 +1,6 @@
 import logging
+import struct
+import time
 
 from pypulsepal._arcom import ArCOM
 from pypulsepal.definitions import (
@@ -555,6 +557,103 @@ class PulsePal:
         ]
         self._arcom.write_array(b"".join(message))
         return self._read_confirmation()  # fixme: returns False
+
+    def save_to_sd(self, filename: str = "default.pps") -> None:
+        """Save current RAM params to SD card (opcode 90, op 1).
+
+        Firmware sends no ack byte — do not read confirmation.
+        A 100ms sleep is inserted to allow SD write to complete.
+        """
+        if self._arcom is None:
+            return
+        name_bytes = filename.encode("ascii")
+        msg = (
+            self.encoded_opcode
+            + encode_message(SendMessageHeader.SETTINGS, encoding=ENCODING_UINT8)
+            + encode_message(1, encoding=ENCODING_UINT8)
+            + encode_message(len(name_bytes), encoding=ENCODING_UINT8)
+            + name_bytes
+        )
+        self._arcom.serial_object.write(msg)
+        time.sleep(0.1)
+
+    def read_sd_params(self) -> dict | None:
+        """Read 178-byte SD parameter file via opcode 85 and parse to a dict.
+
+        Returns None if the firmware returns an unexpected byte count.
+        Keys match ChannelConfig field names; 'triggerAddress' is firmware-only
+        (4-element list of output channel link flags per trigger channel).
+
+        SD byte layout — per output channel ×4 (42 bytes each):
+          8× uint32  phase1Duration, interPhaseInterval, phase2Duration,
+                     interPulseInterval, burstDuration, interBurstInterval,
+                     pulseTrainDuration, pulseTrainDelay  (firmware cycles ÷ 20000 = s)
+          1× uint8   isBiphasic
+          3× uint16  phase1Voltage, phase2Voltage, restingVoltage  (0–65535 → ±10V)
+          3× uint8   customTrainID, customTrainTarget, customTrainLoop
+        Per trigger channel ×2 (5 bytes each):
+          1× uint8   triggerMode
+          4× uint8   triggerAddress[0..3]
+        Total: 4×42 + 2×5 = 178 bytes
+        """
+        if self._arcom is None:
+            return None
+        msg = self.encoded_opcode + encode_message(
+            SendMessageHeader.READ_SD, encoding=ENCODING_UINT8
+        )
+        self._arcom.serial_object.write(msg)
+        time.sleep(0.1)
+        raw = self._arcom.serial_object.read(178)
+
+        if len(raw) != 178:
+            return None
+
+        time_names = [
+            "phase1Duration",
+            "interPhaseInterval",
+            "phase2Duration",
+            "interPulseInterval",
+            "burstDuration",
+            "interBurstInterval",
+            "pulseTrainDuration",
+            "pulseTrainDelay",
+        ]
+        result: dict = {n: [] for n in time_names}
+        for n in ("phase1Voltage", "phase2Voltage", "restingVoltage"):
+            result[n] = []
+        for n in (
+            "isBiphasic",
+            "customTrainID",
+            "customTrainTarget",
+            "customTrainLoop",
+        ):
+            result[n] = []
+        result["triggerMode"] = []
+        result["triggerAddress"] = []
+
+        offset = 0
+        for _ in range(4):
+            for name in time_names:
+                (cycles,) = struct.unpack_from("<I", raw, offset)
+                result[name].append(cycles / PULSEPAL_CYCLE_FREQUENCY)
+                offset += 4
+            result["isBiphasic"].append(raw[offset])
+            offset += 1
+            for name in ("phase1Voltage", "phase2Voltage", "restingVoltage"):
+                (bits,) = struct.unpack_from("<H", raw, offset)
+                result[name].append(round((bits / 65535.0) * 20.0 - 10.0, 4))
+                offset += 2
+            result["customTrainID"].append(raw[offset])
+            result["customTrainTarget"].append(raw[offset + 1])
+            result["customTrainLoop"].append(raw[offset + 2])
+            offset += 3
+
+        for _ in range(2):
+            result["triggerMode"].append(raw[offset])
+            result["triggerAddress"].append(list(raw[offset + 1 : offset + 5]))
+            offset += 5
+
+        return result
 
     def __enter__(self):
         return self
