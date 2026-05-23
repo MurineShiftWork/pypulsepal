@@ -45,10 +45,10 @@ source = "vcs"
 fallback-version = "0.1.0"
 
 [tool.hatch.build.targets.wheel]
-packages = ["pypulsepal"]
+packages = ["src/pypulsepal"]
 
 [tool.hatch.build.targets.sdist]
-include = ["/pypulsepal", "/tests", "/README.md", "/LICENSE", "/pyproject.toml"]
+include = ["/src/pypulsepal", "/tests", "/README.md", "/LICENSE", "/pyproject.toml"]
 
 # ---------------------------------------------------------------------------
 # Commitizen
@@ -93,7 +93,7 @@ select = ["E", "W", "F", "I", "UP", "YTT", "SIM", "PTH", "TCH", "PYI"]
 fixable = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
-"pypulsepal/_arcom.py" = ["E501"]  # vendored file — do not reformat
+"src/pypulsepal/_arcom.py" = ["E501"]  # vendored file — do not reformat
 
 [tool.ruff.format]
 quote-style = "double"
@@ -106,5 +106,6 @@ line-ending = "auto"
 # ---------------------------------------------------------------------------
 
 [tool.mypy]
+mypy_path = "src"
 warn_return_any = false
 ignore_missing_imports = true
