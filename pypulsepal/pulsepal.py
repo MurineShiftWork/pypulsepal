@@ -13,7 +13,7 @@ from pypulsepal.definitions import (
     resolve_param_name_code_pair,
     resolve_trigger_name_code_pair,
 )
-from pypulsepal.models import ChannelConfig, TriggerConfig
+from pypulsepal.models import ChannelConfig, PulsePalConfig, TriggerConfig
 from pypulsepal.utils import encode_message, volts_to_bytes
 
 ENCODING_UINT8 = "uint8"
@@ -79,6 +79,30 @@ class PulsePal:
                 setattr(self, k, v)
 
         self.connect(serial_port=serial_port, baudrate=baudrate)
+
+    @property
+    def config(self) -> PulsePalConfig:
+        return PulsePalConfig(
+            channels=self.channel_configs,
+            triggers=self.trigger_configs,
+        )
+
+    @classmethod
+    def from_config(
+        cls, config: PulsePalConfig, serial_port: str, **kwargs
+    ) -> "PulsePal":
+        instance = cls(serial_port=serial_port, **kwargs)
+        instance.channel_configs = [ch.model_copy() for ch in config.channels]
+        instance.trigger_configs = [tr.model_copy() for tr in config.triggers]
+        instance.sync_all_params()
+        return instance
+
+    def reset_to_defaults(self) -> None:
+        self.channel_configs = [ChannelConfig() for _ in range(self.nr_output_channels)]
+        self.trigger_configs = [
+            TriggerConfig() for _ in range(self.nr_trigger_channels)
+        ]
+        self.sync_all_params()
 
     @property
     def encoded_opcode(self):
