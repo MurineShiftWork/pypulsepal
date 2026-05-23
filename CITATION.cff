@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "PyPulsePal: Python API for the PulsePal open-source pulse train generator"
+repository-code: https://github.com/larsrollik/pypulsepal
+url: https://github.com/larsrollik/pypulsepal
+license: GPL-3.0
+keywords:
+  - neuroscience
+  - pulse generator
+  - hardware API
+  - python
+  - PulsePal
+  - electrophysiology
+authors:
+  - family-names: Rollik
+    given-names: Lars B.
+    orcid: https://orcid.org/0000-0003-0160-6971
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.6379627
+    description: Zenodo concept DOI
+preferred-citation:
+  type: software
+  title: "PyPulsePal: Python API for the PulsePal open-source pulse train generator"
+  authors:
+    - family-names: Rollik
+      given-names: Lars B.
+      orcid: https://orcid.org/0000-0003-0160-6971
+  year: 2022
+  month: 3
+  publisher:
+    name: Zenodo
+  doi: 10.5281/zenodo.6379627
+  url: https://doi.org/10.5281/zenodo.6379627

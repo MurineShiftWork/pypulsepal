@@ -1,8 +1,8 @@
 # Vendored from: pybpodapi.com.arcom (https://github.com/pybpod/pybpod-api)
-# Source package version: pybpod-api 1.8.2
+# Version: pybpod-api 1.8.2
 # License: MIT  Copyright (c) 2019 Scientific Software Platform, Champalimaud Foundation
 # Authors: Joshua Sanders, Carlos Mão de Ferro, Ricardo Ribeiro, Luís Teixeira
-# Vendored to remove pybpod-api as a runtime dependency of pypulsepal.
+# Modifications: none
 
 import logging
 import struct
