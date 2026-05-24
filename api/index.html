@@ -937,6 +937,7 @@
 <h2 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pypulsepal.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChannelConfig</span><span class="p">,</span> <span class="n">TriggerConfig</span><span class="p">,</span> <span class="n">PulsePalConfig</span>
 </code></pre></div>
+<p><code>PulsePalConfig</code> uses <strong>1-indexed integer keys</strong> for channels and triggers — <code>channels[1]</code> through <code>channels[4]</code>, <code>triggers[1]</code> through <code>triggers[2]</code>. String keys from JSON (<code>"1"</code>, <code>"2"</code>, …) are coerced to integers automatically.</p>
 <p>See <a href="../concepts/">Concepts</a> for field-level documentation.</p>
 <hr />
 <h2 id="config_io">config_io<a class="headerlink" href="#config_io" title="Permanent link">&para;</a></h2>
