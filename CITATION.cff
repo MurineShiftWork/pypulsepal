@@ -3,7 +3,7 @@ message: "If you use this software, please cite it as below."
 type: software
 title: "PyPulsePal: Python API for the PulsePal open-source pulse train generator"
 repository-code: https://github.com/larsrollik/pypulsepal
-url: https://github.com/larsrollik/pypulsepal
+url: https://larsrollik.github.io/pypulsepal/
 license: GPL-3.0
 keywords:
   - neuroscience
