@@ -1,0 +1,35 @@
+site_name: PyPulsePal
+site_description: Python API for the PulsePal open-source pulse train generator
+site_url: https://larsrollik.github.io/pypulsepal/
+repo_url: https://github.com/larsrollik/pypulsepal
+repo_name: larsrollik/pypulsepal
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: teal
+    accent: teal
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting_started.md
+  - Concepts: concepts.md
+  - Usage: usage.md
+  - Advanced: advanced.md
+  - API Reference: api.md
