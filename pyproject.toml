@@ -7,9 +7,9 @@ name = "pypulsepal"
 dynamic = ["version"]
 description = "PyPulsePal: Python API for the PulsePal open-source pulse train generator"
 readme = "README.md"
-license = {text = "GPLv3"}
+license = {text = "GPL-3.0"}
 authors = [
-    {name = "Lars B. Rollik", email = "L.B.Rollik@protonmail.com"},
+    {name = "Lars B. Rollik", email = "l.b.rollik@protonmail.com"},
 ]
 requires-python = ">=3.10"
 dependencies = [
@@ -53,20 +53,10 @@ include = ["/src/pypulsepal", "/tests", "/README.md", "/LICENSE", "/pyproject.to
 # ---------------------------------------------------------------------------
 # Commitizen
 # ---------------------------------------------------------------------------
-# Release flow: cz bump → updates [tool.commitizen] version + VERSION file,
-#               creates "bump: ..." commit and annotated tag v{version}.
-#   git push && git push --tags → triggers release CI.
-#
-# Note: prior tags used no "v" prefix (0.1.0). New releases use v prefix (v0.2.0).
-# hatch-vcs finds both conventions via setuptools-scm PEP 440 matching.
-#
-# Commit types that drive version bumps:
-#   feat:                     → minor  (0.2.0)
-#   fix:                      → patch  (0.1.1)
-#   feat!: / BREAKING CHANGE: → major  (1.0.0)
 
 [tool.commitizen]
 name = "cz_conventional_commits"
+version_provider = "commitizen"
 version = "0.2.1"
 tag_format = "v$version"
 update_changelog_on_bump = false
