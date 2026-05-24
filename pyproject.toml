@@ -20,6 +20,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/larsrollik/pypulsepal"
+Documentation = "https://larsrollik.github.io/pypulsepal/"
 "Issue Tracker" = "https://github.com/larsrollik/pypulsepal/issues"
 
 [project.optional-dependencies]
@@ -32,6 +33,8 @@ dev = [
     "mypy",
     "types-PyYAML",
     "commitizen",
+]
+docs = [
     "mkdocs-material",
 ]
 
@@ -48,7 +51,15 @@ fallback-version = "0.1.0"
 packages = ["src/pypulsepal"]
 
 [tool.hatch.build.targets.sdist]
-include = ["/src/pypulsepal", "/tests", "/README.md", "/LICENSE", "/pyproject.toml"]
+include = [
+    "/src/pypulsepal",
+    "/tests",
+    "/README.md",
+    "/LICENSE",
+    "/pyproject.toml",
+    "/CITATION.cff",
+    "/VERSION",
+]
 
 # ---------------------------------------------------------------------------
 # Commitizen
