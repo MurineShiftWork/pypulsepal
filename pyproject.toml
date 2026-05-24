@@ -57,7 +57,7 @@ include = ["/src/pypulsepal", "/tests", "/README.md", "/LICENSE", "/pyproject.to
 [tool.commitizen]
 name = "cz_conventional_commits"
 version_provider = "commitizen"
-version = "0.2.1"
+version = "0.3.0"
 tag_format = "v$version"
 update_changelog_on_bump = false
 version_files = ["VERSION"]
