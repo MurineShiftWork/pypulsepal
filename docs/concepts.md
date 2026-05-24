@@ -64,19 +64,40 @@ Each of the 2 trigger channels is described by a `TriggerConfig` model.
 ## PulsePalConfig
 
 `PulsePalConfig` holds the full device state: 4 channel configs and 2 trigger configs.
+Channels and triggers are keyed by their **1-indexed hardware number** (1–4 for channels, 1–2 for triggers), so there is never any ambiguity from list ordering.
 
 ```python
 from pypulsepal.models import PulsePalConfig, ChannelConfig, TriggerConfig
 
 cfg = PulsePalConfig()
-# cfg.channels  — list of 4 ChannelConfig
-# cfg.triggers  — list of 2 TriggerConfig
+cfg.channels[1].phase1Voltage = 5.0   # channel 1
+cfg.channels[2].phase1Voltage = 3.0   # channel 2
+cfg.triggers[1].triggerMode = 1       # trigger 1
 ```
+
+Serialised to JSON/YAML the structure is:
+
+```json
+{
+  "channels": {
+    "1": {"phase1Voltage": 5.0, ...},
+    "2": {"phase1Voltage": 3.0, ...},
+    "3": {...},
+    "4": {...}
+  },
+  "triggers": {
+    "1": {"triggerMode": 1},
+    "2": {"triggerMode": 0}
+  }
+}
+```
+
+String keys in JSON (`"1"`, `"2"`, …) are coerced to integers automatically on load. YAML files use native integer keys.
 
 The `pp.config` property on a connected `PulsePal` instance returns a `PulsePalConfig` snapshot of the current in-memory state.
 
 ```python
-snapshot = pp.config   # PulsePalConfig with current channel_configs + trigger_configs
+snapshot = pp.config   # PulsePalConfig keyed by 1-indexed channel/trigger number
 ```
 
 ## Pydantic validation

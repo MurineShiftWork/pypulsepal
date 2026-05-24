@@ -10,6 +10,35 @@ Python API for the PulsePal open-source pulse train generator.
 
 ## Example usage
 
+Load and apply a saved config file:
+
+```python
+from pypulsepal import PulsePal
+from pypulsepal.config_io import load_config
+
+cfg = load_config("my_params.json")   # or .yaml
+with PulsePal.from_config(cfg, serial_port="/dev/ttyACM0") as pp:
+    pp.trigger_selected_channels(channel_1=True)
+```
+
+Standard instantiation:
+
+```python
+import time
+from pypulsepal import PulsePal
+
+pp = PulsePal(serial_port="/dev/ttyACM0")
+pp.channel_configs[0].phase1Voltage = 5.0
+pp.channel_configs[0].pulseTrainDuration = 1.0
+pp.sync_all_params()
+pp.trigger_selected_channels(channel_1=True)
+time.sleep(1)
+pp.stop_all_outputs()
+pp.close()
+```
+
+As a context manager (saves settings and closes on exit automatically):
+
 ```python
 import time
 from pypulsepal import PulsePal

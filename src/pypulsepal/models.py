@@ -1,6 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Voltage = Annotated[float, Field(ge=-10.0, le=10.0)]
 Duration = Annotated[float, Field(ge=0.0)]
@@ -37,9 +37,19 @@ class TriggerConfig(BaseModel):
 
 
 class PulsePalConfig(BaseModel):
-    channels: list[ChannelConfig] = Field(
-        default_factory=lambda: [ChannelConfig() for _ in range(4)]
+    channels: dict[int, ChannelConfig] = Field(
+        default_factory=lambda: {i: ChannelConfig() for i in range(1, 5)}
     )
-    triggers: list[TriggerConfig] = Field(
-        default_factory=lambda: [TriggerConfig() for _ in range(2)]
+    triggers: dict[int, TriggerConfig] = Field(
+        default_factory=lambda: {i: TriggerConfig() for i in range(1, 3)}
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_string_keys(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            for field in ("channels", "triggers"):
+                v = data.get(field)
+                if isinstance(v, dict):
+                    data[field] = {int(k): val for k, val in v.items()}
+        return data

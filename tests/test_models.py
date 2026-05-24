@@ -113,32 +113,49 @@ class TestPulsePalConfig:
     def test_default_trigger_count(self):
         assert len(PulsePalConfig().triggers) == 2
 
+    def test_channels_keyed_1_to_4(self):
+        assert set(PulsePalConfig().channels.keys()) == {1, 2, 3, 4}
+
+    def test_triggers_keyed_1_to_2(self):
+        assert set(PulsePalConfig().triggers.keys()) == {1, 2}
+
     def test_channels_are_default(self):
-        for ch in PulsePalConfig().channels:
+        for ch in PulsePalConfig().channels.values():
             assert ch == ChannelConfig()
 
     def test_triggers_are_default(self):
-        for tr in PulsePalConfig().triggers:
+        for tr in PulsePalConfig().triggers.values():
             assert tr == TriggerConfig()
 
     def test_custom_channel(self):
         ch = ChannelConfig(phase1Voltage=2.0)
-        cfg = PulsePalConfig(channels=[ch] + [ChannelConfig()] * 3)
-        assert cfg.channels[0].phase1Voltage == 2.0
-        assert cfg.channels[1].phase1Voltage == 5.0  # default
+        cfg = PulsePalConfig(
+            channels={1: ch, 2: ChannelConfig(), 3: ChannelConfig(), 4: ChannelConfig()}
+        )
+        assert cfg.channels[1].phase1Voltage == 2.0
+        assert cfg.channels[2].phase1Voltage == 5.0  # default
 
-    def test_model_validate_from_dict(self):
+    def test_model_validate_from_dict_int_keys(self):
         data = {
-            "channels": [{"phase1Voltage": 1.0}] + [{}] * 3,
-            "triggers": [{"triggerMode": 1}, {"triggerMode": 0}],
+            "channels": {1: {"phase1Voltage": 1.0}, 2: {}, 3: {}, 4: {}},
+            "triggers": {1: {"triggerMode": 1}, 2: {}},
         }
         cfg = PulsePalConfig.model_validate(data)
-        assert cfg.channels[0].phase1Voltage == 1.0
-        assert cfg.triggers[0].triggerMode == 1
+        assert cfg.channels[1].phase1Voltage == 1.0
+        assert cfg.triggers[1].triggerMode == 1
+
+    def test_model_validate_from_dict_string_keys(self):
+        data = {
+            "channels": {"1": {"phase1Voltage": 1.5}, "2": {}, "3": {}, "4": {}},
+            "triggers": {"1": {"triggerMode": 2}, "2": {}},
+        }
+        cfg = PulsePalConfig.model_validate(data)
+        assert cfg.channels[1].phase1Voltage == 1.5
+        assert cfg.triggers[1].triggerMode == 2
 
     def test_model_dump_round_trip(self):
         cfg = PulsePalConfig()
-        cfg.channels[0].phase1Voltage = 3.0
+        cfg.channels[1].phase1Voltage = 3.0
         dumped = cfg.model_dump()
         restored = PulsePalConfig.model_validate(dumped)
-        assert restored.channels[0].phase1Voltage == 3.0
+        assert restored.channels[1].phase1Voltage == 3.0

@@ -86,14 +86,14 @@ class TestConfigProperty:
 
     def test_config_reflects_channel_state(self, pp):
         pp.channel_configs[0].phase1Voltage = 3.0
-        assert pp.config.channels[0].phase1Voltage == 3.0
+        assert pp.config.channels[1].phase1Voltage == 3.0  # channel_configs[0] → key 1
 
     def test_config_reflects_trigger_state(self, pp):
         pp.trigger_configs[1].triggerMode = 2
-        assert pp.config.triggers[1].triggerMode == 2
+        assert pp.config.triggers[2].triggerMode == 2  # trigger_configs[1] → key 2
 
     def test_config_channels_are_defaults_initially(self, pp):
-        for ch in pp.config.channels:
+        for ch in pp.config.channels.values():
             assert ch == ChannelConfig()
 
 
@@ -134,8 +134,13 @@ class TestResetToDefaults:
 class TestFromConfig:
     def test_channels_applied(self):
         cfg = PulsePalConfig(
-            channels=[ChannelConfig(phase1Voltage=2.5)] + [ChannelConfig()] * 3,
-            triggers=[TriggerConfig()] * 2,
+            channels={
+                1: ChannelConfig(phase1Voltage=2.5),
+                2: ChannelConfig(),
+                3: ChannelConfig(),
+                4: ChannelConfig(),
+            },
+            triggers={1: TriggerConfig(), 2: TriggerConfig()},
         )
         pp, _ = _make_pp(config=cfg)
         assert pp.channel_configs[0].phase1Voltage == 2.5
@@ -143,8 +148,8 @@ class TestFromConfig:
 
     def test_triggers_applied(self):
         cfg = PulsePalConfig(
-            channels=[ChannelConfig()] * 4,
-            triggers=[TriggerConfig(triggerMode=1), TriggerConfig(triggerMode=2)],
+            channels={i: ChannelConfig() for i in range(1, 5)},
+            triggers={1: TriggerConfig(triggerMode=1), 2: TriggerConfig(triggerMode=2)},
         )
         pp, _ = _make_pp(config=cfg)
         assert pp.trigger_configs[0].triggerMode == 1
@@ -160,7 +165,7 @@ class TestFromConfig:
         cfg = PulsePalConfig()
         pp, _ = _make_pp(config=cfg)
         pp.channel_configs[0].phase1Voltage = 9.9
-        assert cfg.channels[0].phase1Voltage != 9.9
+        assert cfg.channels[1].phase1Voltage != 9.9
 
     def test_returns_pulsepal_instance(self):
         pp, _ = _make_pp(config=PulsePalConfig())

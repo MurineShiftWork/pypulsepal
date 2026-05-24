@@ -86,8 +86,8 @@ class PulsePal:
     @property
     def config(self) -> PulsePalConfig:
         return PulsePalConfig(
-            channels=self.channel_configs,
-            triggers=self.trigger_configs,
+            channels={i + 1: ch for i, ch in enumerate(self.channel_configs)},
+            triggers={i + 1: tr for i, tr in enumerate(self.trigger_configs)},
         )
 
     @classmethod
@@ -95,8 +95,14 @@ class PulsePal:
         cls, config: PulsePalConfig, serial_port: str, **kwargs
     ) -> "PulsePal":
         instance = cls(serial_port=serial_port, **kwargs)
-        instance.channel_configs = [ch.model_copy() for ch in config.channels]
-        instance.trigger_configs = [tr.model_copy() for tr in config.triggers]
+        instance.channel_configs = [
+            config.channels.get(i + 1, ChannelConfig()).model_copy()
+            for i in range(instance.nr_output_channels)
+        ]
+        instance.trigger_configs = [
+            config.triggers.get(i + 1, TriggerConfig()).model_copy()
+            for i in range(instance.nr_trigger_channels)
+        ]
         instance.sync_all_params()
         return instance
 
@@ -105,8 +111,14 @@ class PulsePal:
         from pypulsepal.config_io import load_config
 
         cfg = load_config(path)
-        self.channel_configs = [ch.model_copy() for ch in cfg.channels]
-        self.trigger_configs = [tr.model_copy() for tr in cfg.triggers]
+        self.channel_configs = [
+            cfg.channels.get(i + 1, ChannelConfig()).model_copy()
+            for i in range(self.nr_output_channels)
+        ]
+        self.trigger_configs = [
+            cfg.triggers.get(i + 1, TriggerConfig()).model_copy()
+            for i in range(self.nr_trigger_channels)
+        ]
 
     def save_config(self, path) -> None:
         """Save current channel/trigger configs to a JSON or YAML file."""
@@ -689,17 +701,19 @@ class PulsePal:
 
         return result
 
+    def close(self) -> None:
+        """Save settings to device and close the serial connection."""
+        self.save_settings()
+        if self._arcom is not None:
+            self._arcom.close()
+            self._arcom = None
+
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.save_settings()
-        if self._arcom is not None:
-            self._arcom.close()
+        self.close()
 
     def __del__(self):
         with contextlib.suppress(Exception):
-            self.save_settings()
-        if self._arcom is not None:
-            with contextlib.suppress(Exception):
-                self._arcom.close()
+            self.close()

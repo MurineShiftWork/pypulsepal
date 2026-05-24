@@ -20,18 +20,25 @@ class TestSaveLoadJSON:
     def test_round_trip_custom_voltage(self, tmp_path):
         path = tmp_path / "cfg.json"
         cfg = PulsePalConfig(
-            channels=[ChannelConfig(phase1Voltage=3.5)] + [ChannelConfig()] * 3
+            channels={
+                1: ChannelConfig(phase1Voltage=3.5),
+                2: ChannelConfig(),
+                3: ChannelConfig(),
+                4: ChannelConfig(),
+            }
         )
         save_config(cfg, path)
         loaded = load_config(path)
-        assert loaded.channels[0].phase1Voltage == 3.5
+        assert loaded.channels[1].phase1Voltage == 3.5
 
     def test_round_trip_trigger_mode(self, tmp_path):
         path = tmp_path / "cfg.json"
-        cfg = PulsePalConfig(triggers=[TriggerConfig(triggerMode=2), TriggerConfig()])
+        cfg = PulsePalConfig(
+            triggers={1: TriggerConfig(triggerMode=2), 2: TriggerConfig()}
+        )
         save_config(cfg, path)
         loaded = load_config(path)
-        assert loaded.triggers[0].triggerMode == 2
+        assert loaded.triggers[1].triggerMode == 2
 
     def test_json_is_valid(self, tmp_path):
         path = tmp_path / "cfg.json"
@@ -47,16 +54,24 @@ class TestSaveLoadJSON:
         text = path.read_text()
         assert "\n" in text
 
-    def test_load_partial_channel_uses_defaults(self, tmp_path):
+    def test_load_string_keys_coerced_to_int(self, tmp_path):
         path = tmp_path / "cfg.json"
         path.write_text(
             json.dumps(
-                {"channels": [{"phase1Voltage": 2.0}] + [{}] * 3, "triggers": [{}, {}]}
+                {
+                    "channels": {
+                        "1": {"phase1Voltage": 2.0},
+                        "2": {},
+                        "3": {},
+                        "4": {},
+                    },
+                    "triggers": {"1": {}, "2": {}},
+                }
             )
         )
         loaded = load_config(path)
-        assert loaded.channels[0].phase1Voltage == 2.0
-        assert loaded.channels[1].phase1Voltage == ChannelConfig().phase1Voltage
+        assert loaded.channels[1].phase1Voltage == 2.0
+        assert loaded.channels[2].phase1Voltage == ChannelConfig().phase1Voltage
 
 
 class TestSaveLoadYAML:
@@ -70,20 +85,30 @@ class TestSaveLoadYAML:
     def test_round_trip_yml_suffix(self, tmp_path):
         path = tmp_path / "cfg.yml"
         cfg = PulsePalConfig(
-            channels=[ChannelConfig(phase1Voltage=1.0)] + [ChannelConfig()] * 3
+            channels={
+                1: ChannelConfig(phase1Voltage=1.0),
+                2: ChannelConfig(),
+                3: ChannelConfig(),
+                4: ChannelConfig(),
+            }
         )
         save_config(cfg, path)
         loaded = load_config(path)
-        assert loaded.channels[0].phase1Voltage == 1.0
+        assert loaded.channels[1].phase1Voltage == 1.0
 
     def test_round_trip_custom_duration(self, tmp_path):
         path = tmp_path / "cfg.yaml"
         cfg = PulsePalConfig(
-            channels=[ChannelConfig(phase1Duration=0.005)] + [ChannelConfig()] * 3
+            channels={
+                1: ChannelConfig(phase1Duration=0.005),
+                2: ChannelConfig(),
+                3: ChannelConfig(),
+                4: ChannelConfig(),
+            }
         )
         save_config(cfg, path)
         loaded = load_config(path)
-        assert abs(loaded.channels[0].phase1Duration - 0.005) < 1e-9
+        assert abs(loaded.channels[1].phase1Duration - 0.005) < 1e-9
 
     def test_yaml_is_readable(self, tmp_path):
         path = tmp_path / "cfg.yaml"
@@ -145,7 +170,12 @@ class TestPulsePalConfigMethods:
         pp, _ = _make_pp()
         path = tmp_path / "cfg.json"
         cfg = PulsePalConfig(
-            channels=[ChannelConfig(phase1Voltage=4.0)] + [ChannelConfig()] * 3
+            channels={
+                1: ChannelConfig(phase1Voltage=4.0),
+                2: ChannelConfig(),
+                3: ChannelConfig(),
+                4: ChannelConfig(),
+            }
         )
         save_config(cfg, path)
         pp.load_config(path)

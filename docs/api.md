@@ -80,6 +80,8 @@ from pypulsepal import PulsePal
 from pypulsepal.models import ChannelConfig, TriggerConfig, PulsePalConfig
 ```
 
+`PulsePalConfig` uses **1-indexed integer keys** for channels and triggers — `channels[1]` through `channels[4]`, `triggers[1]` through `triggers[2]`. String keys from JSON (`"1"`, `"2"`, …) are coerced to integers automatically.
+
 See [Concepts](concepts.md) for field-level documentation.
 
 ---

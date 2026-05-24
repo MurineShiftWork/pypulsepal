@@ -30,12 +30,11 @@ dev = [
     "pre-commit",
     "ruff",
     "mypy",
+    "types-PyYAML",
     "commitizen",
     "mkdocs-material",
 ]
 
-[project.scripts]
-pulsepal = "pypulsepal:run"
 
 # ---------------------------------------------------------------------------
 # Build
