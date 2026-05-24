@@ -203,7 +203,9 @@ class PulsePal:
                 f"Could not connect PulsePal at '{serial_port}' "
                 f"with baudrate {baudrate}"
             )
-        self._pulsepal_set_display(row1="PyPulsePal", row2="")
+        self._pulsepal_set_display(
+            row1="PulsePal", row2=f"Python fw{self.firmware_version}"
+        )
         return self
 
     def _pulsepal_set_display(self, row1: str = "", row2: str = "") -> None:
@@ -213,7 +215,7 @@ class PulsePal:
 
         def _pad(s: str) -> bytes:
             b = s[:16].encode("ascii")
-            return b + bytes(16 - len(b))
+            return b + b" " * (16 - len(b))
 
         msg = (
             self.encoded_opcode
