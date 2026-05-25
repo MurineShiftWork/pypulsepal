@@ -6,8 +6,8 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
-      - "src/**/*.py"
       - ".github/workflows/docs.yml"
+      - "src/**/*.py"   # rebuild on source changes if using mkdocstrings
   workflow_dispatch:
 
 permissions:
