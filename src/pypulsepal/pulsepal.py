@@ -10,11 +10,11 @@ from pypulsepal.definitions import (
     PARAM_DTYPE_MODEL_2,
     PARAM_SCALING,
     PULSEPAL_CYCLE_FREQUENCY,
+    TRIGGER_MODE_NAMES,
     VOLTAGE_PARAM_NAMES,
     ReceiveMessageHeader,
     SendMessageHeader,
     resolve_param_name_code_pair,
-    resolve_trigger_name_code_pair,
 )
 from pypulsepal.models import ChannelConfig, PulsePalConfig, TriggerConfig
 from pypulsepal.utils import encode_message, volts_to_bytes
@@ -213,15 +213,15 @@ class PulsePal:
         if self._arcom is None:
             return
 
-        def _pad(s: str) -> bytes:
+        def _row(s: str) -> bytes:
             b = s[:16].encode("ascii")
-            return b + b" " * (16 - len(b))
+            return bytes([len(b)]) + b + b" " * (16 - len(b))
 
         msg = (
             self.encoded_opcode
             + encode_message(SendMessageHeader.DISPLAY, encoding=ENCODING_UINT8)
-            + _pad(row1)
-            + _pad(row2)
+            + _row(row1)
+            + _row(row2)
         )
         self._arcom.write_array(msg)
 
@@ -263,14 +263,18 @@ class PulsePal:
         return write_ok
 
     def program_trigger_channel(self, trigger_channel=None, trigger_mode=None):
-        """"""
-        _, trigger_mode_value = resolve_trigger_name_code_pair(
-            trigger_name_or_code=trigger_mode
-        )
+        if isinstance(trigger_mode, str):
+            mode_value = TRIGGER_MODE_NAMES.get(trigger_mode)
+            if mode_value is None:
+                raise ValueError(
+                    f"Unknown trigger mode {trigger_mode!r}; valid: {list(TRIGGER_MODE_NAMES)}"
+                )
+        else:
+            mode_value = int(trigger_mode)
         write_ok = self.program_one_param(
             channel=trigger_channel,
             param_name="triggerMode",
-            param_value=trigger_mode_value,
+            param_value=mode_value,
         )
         return write_ok
 

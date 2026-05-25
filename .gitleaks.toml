@@ -1,0 +1,6 @@
+# Gitleaks configuration
+# https://github.com/gitleaks/gitleaks#configuration
+
+[extend]
+# Extend the default gitleaks ruleset
+useDefault = true
