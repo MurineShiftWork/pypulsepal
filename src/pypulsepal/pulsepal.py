@@ -513,11 +513,10 @@ class PulsePal:
         return self._read_confirmation()
 
     def set_continuous(self, channel=None, state=None):
-        """"""
         message = [
             self.encoded_opcode,
             encode_message(SendMessageHeader.CONTINUOUS, encoding=ENCODING_UINT8),
-            encode_message(channel, encoding=ENCODING_UINT8),
+            encode_message(channel + 1, encoding=ENCODING_UINT8),
             encode_message(state, encoding=ENCODING_UINT8),
         ]
         self._arcom.write_array(b"".join(message))
