@@ -17,20 +17,3 @@ authors:
   - family-names: Rollik
     given-names: Lars B.
     orcid: https://orcid.org/0000-0003-0160-6971
-identifiers:
-  - type: doi
-    value: 10.5281/zenodo.6379627
-    description: Zenodo concept DOI
-preferred-citation:
-  type: software
-  title: "PyPulsePal: Python API for the PulsePal open-source pulse train generator"
-  authors:
-    - family-names: Rollik
-      given-names: Lars B.
-      orcid: https://orcid.org/0000-0003-0160-6971
-  year: 2022
-  month: 3
-  publisher:
-    name: Zenodo
-  doi: 10.5281/zenodo.6379627
-  url: https://doi.org/10.5281/zenodo.6379627

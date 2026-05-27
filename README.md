@@ -1,6 +1,5 @@
 # PyPulsePal
 
-[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.6379627.svg)](https://doi.org/10.5281/zenodo.6379627)
 [![PyPI](https://img.shields.io/pypi/v/pypulsepal.svg)](https://pypi.org/project/pypulsepal)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
@@ -74,20 +73,9 @@ pip install -e ".[yaml]"
 
 ## Citation
 
-To cite PyPulsePal:
+To cite PyPulsePal, reference the GitHub repository:
 
-> Rollik, Lars B. (2022). PyPulsePal: Python API for the PulsePal open-source pulse train generator. doi: [10.5281/zenodo.6379627](https://doi.org/10.5281/zenodo.6379627).
-
-```bibtex
-@misc{rollik2022pypulsepal,
-    author    = {Lars B. Rollik},
-    title     = {{PyPulsePal: Python API for the PulsePal open-source pulse train generator}},
-    year      = {2022},
-    publisher = {Zenodo},
-    url       = {https://doi.org/10.5281/zenodo.6379627},
-    doi       = {10.5281/zenodo.6379627},
-}
-```
+> Rollik, Lars B. PyPulsePal: Python API for the PulsePal open-source pulse train generator. https://github.com/murineshiftwork/pypulsepal
 
 Please also cite the original [PulsePal](https://github.com/sanworks/PulsePal) hardware and [PyBpod](https://github.com/pybpod/pybpod) publications that this package builds on.
 
