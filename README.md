@@ -6,7 +6,7 @@
 
 Python API for the PulsePal open-source pulse train generator.
 
-**[→ Full documentation](https://larsrollik.github.io/pypulsepal)**
+**[→ Full documentation](https://murineshiftwork.github.io/pypulsepal)**
 
 ## Example usage
 
@@ -67,7 +67,7 @@ pip install "pypulsepal[yaml]"
 From source:
 
 ```shell
-git clone https://github.com/larsrollik/pypulsepal.git
+git clone https://github.com/murineshiftwork/pypulsepal.git
 cd pypulsepal
 pip install -e ".[yaml]"
 ```
