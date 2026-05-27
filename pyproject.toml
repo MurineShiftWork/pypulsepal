@@ -19,9 +19,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/larsrollik/pypulsepal"
-Documentation = "https://larsrollik.github.io/pypulsepal/"
-"Issue Tracker" = "https://github.com/larsrollik/pypulsepal/issues"
+Homepage = "https://github.com/murineshiftwork/pypulsepal"
+Documentation = "https://murineshiftwork.github.io/pypulsepal/"
+"Issue Tracker" = "https://github.com/murineshiftwork/pypulsepal/issues"
 
 [project.optional-dependencies]
 yaml = ["pyyaml"]
