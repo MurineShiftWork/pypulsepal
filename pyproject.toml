@@ -70,7 +70,7 @@ include = [
 [tool.commitizen]
 name = "cz_conventional_commits"
 version_provider = "commitizen"
-version = "0.4.2"
+version = "0.4.3"
 tag_format = "v$version"
 update_changelog_on_bump = false
 version_files = ["VERSION"]
