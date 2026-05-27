@@ -33,7 +33,7 @@ jobs:
   test:
     name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
-    if: "!startsWith(github.event.head_commit.message, 'bump:')"
+    if: github.event_name == 'pull_request'
     strategy:
       fail-fast: false
       matrix:
