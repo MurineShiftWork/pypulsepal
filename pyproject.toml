@@ -7,9 +7,9 @@ name = "pypulsepal"
 dynamic = ["version"]
 description = "Python API for the PulsePal open-source pulse train generator"
 readme = "README.md"
-license = {text = "GPL-3.0"}
+license = {text = "BSD-3-Clause"}
 authors = [
-    {name = "Lars B. Rollik", email = "l.b.rollik@protonmail.com"},
+    {name = "Lars B. Rollik", email = "lars@rollik.me"},
 ]
 requires-python = ">=3.10"
 dependencies = [
