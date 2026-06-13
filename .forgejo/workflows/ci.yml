@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
     tags-ignore: ["v*"]
   pull_request:
     branches: [main]
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     if: "!startsWith(github.event.head_commit.message, 'bump:')"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -24,10 +24,11 @@ jobs:
         with:
           python-version: "3.12"
 
+
       - name: Install dependencies
         run: uv sync --extra dev
 
-      - name: Run pre-commit
+      - name: Run pre-commit (ruff + mypy + commitizen + gitleaks)
         run: uv run pre-commit run --all-files --show-diff-on-failure
 
   test:
@@ -38,10 +39,11 @@ jobs:
       fail-fast: false
       matrix:
 
+
         python-version: ["3.12", "3.13"]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -49,12 +51,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install
+
+      - name: Install dependencies
         run: uv sync --extra dev
 
       - name: Run tests
-        run: uv run pytest --tb=short
+        run: uv run pytest
 
+  # Aggregate gate — add as required status check in branch protection
   ci:
     name: CI
     runs-on: ubuntu-latest
@@ -63,6 +67,7 @@ jobs:
     steps:
       - name: Check required jobs
         run: |
+
           if [[ "${{ needs.lint.result }}" != "success" && "${{ needs.lint.result }}" != "skipped" ]]; then
             echo "lint failed" && exit 1
           fi
