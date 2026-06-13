@@ -23,17 +23,7 @@ repos:
       - id: mypy
         additional_dependencies: [pydantic>=2.0, pyserial, types-PyYAML]
 
-  - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.16.2
-    hooks:
-      - id: commitizen
-        stages: [commit-msg]
-
-  - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.0
-    hooks:
-      - id: gitleaks
-
+  # commit-msg stage: fix first, then validate
   - repo: local
     hooks:
       - id: fix-commit-msg
@@ -42,8 +32,19 @@ repos:
         entry: python3 .githooks/fix_commit_msg.py
         stages: [commit-msg]
 
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.16.2
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
   - repo: https://github.com/jorisroovers/gitlint
     rev: v0.19.1
     hooks:
       - id: gitlint
         stages: [commit-msg]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
