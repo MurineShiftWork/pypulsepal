@@ -141,8 +141,9 @@ PARAM_SCALING = {
 
 
 class SendMessageHeader:
-    """
-    https://sites.google.com/site/pulsepalwiki/usb-serial-interface/usb-interface-v2-x
+    """Opcode constants for messages sent from host to PulsePal over serial.
+
+    See: https://sites.google.com/site/pulsepalwiki/usb-serial-interface/usb-interface-v2-x
     """
 
     HANDSHAKE = "H"  # "H" == chr(72)
@@ -171,8 +172,9 @@ class SendMessageHeader:
 
 
 class ReceiveMessageHeader:
-    """
-    https://sites.google.com/site/pulsepalwiki/usb-serial-interface/usb-interface-v2-x
+    """Opcode constants for messages received from PulsePal over serial.
+
+    See: https://sites.google.com/site/pulsepalwiki/usb-serial-interface/usb-interface-v2-x
     """
 
     HANDSHAKE_OK = "K"  # "K" == chr(75)  # + 32-bit int for firmware version
@@ -202,6 +204,7 @@ def resolve_param_name_code_pair(param_name_or_code=None):
 
 
 def resolve_trigger_name_code_pair(trigger_name_or_code=None):
+    """Expect trigger parameter name or code (integer) and return both name and code."""
     trigger_name = trigger_code = trigger_name_or_code
     if isinstance(trigger_name_or_code, str):
         trigger_code = PARAM_NAMES.get(trigger_name_or_code)

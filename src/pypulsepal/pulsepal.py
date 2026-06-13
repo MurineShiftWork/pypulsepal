@@ -101,6 +101,7 @@ class PulsePal:
 
     @property
     def config(self) -> PulsePalConfig:
+        """Current channel and trigger configs as a PulsePalConfig snapshot."""
         return PulsePalConfig(
             channels={i + 1: ch for i, ch in enumerate(self.channel_configs)},
             triggers={i + 1: tr for i, tr in enumerate(self.trigger_configs)},
@@ -110,6 +111,16 @@ class PulsePal:
     def from_config(
         cls, config: PulsePalConfig, serial_port: str, **kwargs
     ) -> "PulsePal":
+        """Construct a connected PulsePal with the given config pre-loaded and synced.
+
+        Args:
+            config: Device configuration to apply immediately after connecting.
+            serial_port: Serial port path (e.g. ``/dev/ttyACM0``, ``COM3``).
+            **kwargs: Forwarded to the constructor.
+
+        Returns:
+            Connected PulsePal instance with all parameters synced to hardware.
+        """
         instance = cls(serial_port=serial_port, **kwargs)
         instance.channel_configs = [
             config.channels.get(i + 1, ChannelConfig()).model_copy()
@@ -143,6 +154,7 @@ class PulsePal:
         save_config(self.config, path)
 
     def reset_to_defaults(self) -> None:
+        """Reset all channel and trigger configs to factory defaults and sync to hardware."""
         self.channel_configs = [ChannelConfig() for _ in range(self.nr_output_channels)]
         self.trigger_configs = [
             TriggerConfig() for _ in range(self.nr_trigger_channels)
@@ -151,6 +163,7 @@ class PulsePal:
 
     @property
     def encoded_opcode(self):
+        """The handshake opcode byte encoded for serial transmission."""
         return encode_message(self.opcode, encoding=ENCODING_UINT8)
 
     @encoded_opcode.setter
@@ -248,13 +261,24 @@ class PulsePal:
         self._arcom.write_array(msg)
 
     def _update_param(self, channel, param_name, param_value):
+        """Write a confirmed hardware value back into the in-memory config objects."""
         if param_name in ChannelConfig.model_fields:
             setattr(self.channel_configs[channel], param_name, param_value)
         elif param_name in TriggerConfig.model_fields:
             setattr(self.trigger_configs[channel], param_name, param_value)
 
     def program_one_param(self, channel=None, param_name=None, param_value=None):
-        """Program one channel parameter (one parameter on one channel)."""
+        """Send a single parameter update to hardware and mirror it in the in-memory config.
+
+        Args:
+            channel: 0-indexed channel number.
+            param_name: Parameter name string (e.g. ``"phase1Voltage"``) or integer code.
+            param_value: Value in natural units (volts or seconds); scaling to wire format
+                is applied internally.
+
+        Returns:
+            True if hardware acknowledged the write.
+        """
         original_value = param_value
         param_name, param_code = resolve_param_name_code_pair(
             param_name_or_code=param_name
@@ -285,6 +309,16 @@ class PulsePal:
         return write_ok
 
     def program_trigger_channel(self, trigger_channel=None, trigger_mode=None):
+        """Set the trigger mode for one trigger input channel.
+
+        Args:
+            trigger_channel: 0-indexed trigger channel number.
+            trigger_mode: Mode as an integer (0 normal, 1 toggle, 2 gated) or the
+                equivalent string (``"normal"``, ``"toggle"``, ``"gated"``).
+
+        Returns:
+            True if hardware acknowledged the write.
+        """
         if isinstance(trigger_mode, str):
             mode_value = TRIGGER_MODE_NAMES.get(trigger_mode)
             if mode_value is None:
@@ -445,7 +479,10 @@ class PulsePal:
 
         Args:
             channel: 0-indexed output channel.
-            voltage: Target voltage in volts (range: −10 to +10 V).
+            voltage: Target voltage in volts (range: -10 to +10 V).
+
+        Returns:
+            True if hardware acknowledged the write.
         """
         voltage_bits = volts_to_bytes(volt=voltage, dac_bitMax=self.dac_bitMax)
         if self.model == 1:
@@ -474,9 +511,12 @@ class PulsePal:
         """Upload a custom pulse train to hardware slot 0 or 1.
 
         Args:
-            pulse_train_id: Slot index — 0 or 1.
+            pulse_train_id: Slot index, 0 or 1.
             pulse_times: Pulse onset times in seconds.
             pulse_voltages: Output voltages in volts for each pulse.
+
+        Returns:
+            True if hardware acknowledged the upload.
         """
         if pulse_train_id not in (0, 1):
             raise ValueError(f"pulse_train_id must be 0 or 1, got {pulse_train_id}")
@@ -520,9 +560,12 @@ class PulsePal:
         """Upload an evenly-spaced waveform to hardware slot 0 or 1.
 
         Args:
-            pulse_train_id: Slot index — 0 or 1.
-            pulse_width: Inter-pulse interval in seconds.
+            pulse_train_id: Slot index, 0 or 1.
+            pulse_width: Inter-sample interval in seconds.
             pulse_voltages: Output voltages in volts for each sample.
+
+        Returns:
+            True if hardware acknowledged the upload.
         """
         if pulse_train_id not in (0, 1):
             raise ValueError(f"pulse_train_id must be 0 or 1, got {pulse_train_id}")
@@ -557,6 +600,15 @@ class PulsePal:
         return self._read_confirmation()
 
     def set_continuous(self, channel: int, state: int) -> bool:
+        """Enable or disable continuous output mode on one channel.
+
+        Args:
+            channel: 0-indexed output channel.
+            state: 1 to enable continuous output, 0 to disable.
+
+        Returns:
+            True if hardware acknowledged the write.
+        """
         message = [
             self.encoded_opcode,
             encode_message(SendMessageHeader.CONTINUOUS, encoding=ENCODING_UINT8),
@@ -625,6 +677,7 @@ class PulsePal:
         self._arcom.write_array(b"".join(message))
 
     def trigger_all_channels(self):
+        """Software-trigger all four output channels simultaneously."""
         return self.trigger_selected_channels(
             channel_1=True, channel_2=True, channel_3=True, channel_4=True
         )
@@ -762,9 +815,11 @@ class PulsePal:
             self._arcom = None
 
     def __enter__(self):
+        """Return self to support use as a context manager."""
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Save settings and close the serial connection on context exit."""
         self.close()
 
     def __del__(self):

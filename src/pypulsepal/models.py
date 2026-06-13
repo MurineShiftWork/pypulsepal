@@ -9,6 +9,12 @@ TriggerModeValue = Annotated[int, Field(ge=0, le=2)]
 
 
 class ChannelConfig(BaseModel):
+    """Validated parameter set for one PulsePal output channel.
+
+    All voltages in volts; all durations in seconds.
+    Assignment-time validation is enforced via pydantic.
+    """
+
     model_config = ConfigDict(validate_assignment=True)
 
     isBiphasic: bool = False
@@ -31,12 +37,20 @@ class ChannelConfig(BaseModel):
 
 
 class TriggerConfig(BaseModel):
+    """Validated parameter set for one PulsePal trigger input channel."""
+
     model_config = ConfigDict(validate_assignment=True)
 
     triggerMode: TriggerModeValue = 0
 
 
 class PulsePalConfig(BaseModel):
+    """Full device configuration.
+
+    One ChannelConfig per output channel, one TriggerConfig per trigger input.
+    Keys are 1-indexed integers; string keys in serialised data are coerced to int.
+    """
+
     channels: dict[int, ChannelConfig] = Field(
         default_factory=lambda: {i: ChannelConfig() for i in range(1, 5)}
     )
