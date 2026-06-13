@@ -1,10 +1,12 @@
 # Changes here will be overwritten by Copier
 _commit: v0.4.2
-_src_path: gh:larsrollik/templatepy
+_src_path: /home/tars/code/project_templates/templatepy
 author_email: l.b.rollik@protonmail.com
 author_name: Lars B. Rollik
 github_repo: pypulsepal
 github_username: larsrollik
+license_type: bsd3
+private_repo_deps: false
 project_description: Python API for the PulsePal open-source pulse train generator
 project_name: PyPulsePal
 project_slug: pypulsepal
