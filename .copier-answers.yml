@@ -12,3 +12,4 @@ project_name: PyPulsePal
 project_slug: pypulsepal
 python_requires: '3.12'
 year: '2026'
+test_on_windows: false
