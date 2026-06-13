@@ -96,3 +96,11 @@ from pypulsepal.config_io import load_config, save_config
 |---|---|
 | `load_config(path)` | Load `PulsePalConfig` from a JSON or YAML file |
 | `save_config(config, path)` | Save `PulsePalConfig` to a JSON or YAML file |
+
+---
+
+## Auto-generated reference
+
+::: pypulsepal.PulsePal
+
+::: pypulsepal.pulsepal.PulsePalError

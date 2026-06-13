@@ -2,6 +2,7 @@ import contextlib
 import logging
 import struct
 import time
+from typing import Any
 
 from pypulsepal._arcom import ArCOM
 from pypulsepal.definitions import (
@@ -29,40 +30,54 @@ class PulsePalError(Exception):
 
 
 class PulsePal:
-    """"""
+    """Python interface for the PulsePal open-source pulse train generator.
+
+    Connects to PulsePal hardware over serial and provides methods for
+    configuring output channels, uploading pulse trains, and triggering outputs.
+
+    Example:
+        >>> pp = PulsePal("/dev/ttyACM0")
+        >>> pp.channel_configs[0].phase1_duration = 0.001
+        >>> pp.sync_all_params()
+        >>> pp.trigger_all_channels()
+        >>> pp.save_settings()
+    """
 
     # communication
-    _arcom = None
-    serial_port = None
-    baudrate = 115200
+    _arcom: Any = None
+    serial_port: str | None = None
+    baudrate: int = 115200
 
     # hardware attributes
-    firmware_version = None
-    model = None
-    dac_bitMax = None
-    cycle_frequency = 20000
-    nr_output_channels = 4
-    nr_trigger_channels = 2
-    opcode = 213
-    param_dtype_lookup = None
+    firmware_version: int | None = None
+    model: int | None = None
+    dac_bitMax: int | None = None
+    cycle_frequency: int = 20000
+    nr_output_channels: int = 4
+    nr_trigger_channels: int = 2
+    opcode: int = 213
+    param_dtype_lookup: Any = None
 
     def __init__(
         self,
-        serial_port=None,
-        baudrate=115200,
-        cycle_frequency=PULSEPAL_CYCLE_FREQUENCY,
-        nr_output_channels=4,
-        nr_trigger_channels=2,
-        opcode=213,
-        **kwargs,
+        serial_port: str | None = None,
+        baudrate: int = 115200,
+        cycle_frequency: int = PULSEPAL_CYCLE_FREQUENCY,
+        nr_output_channels: int = 4,
+        nr_trigger_channels: int = 2,
+        opcode: int = 213,
+        **kwargs: Any,
     ):
-        """
-        :param serial_port:
-        :param baudrate:
-        :param cycle_frequency:
-        :param nr_output_channels:
-        :param nr_trigger_channels:
-        :param kwargs:
+        """Connect to PulsePal hardware over serial.
+
+        Args:
+            serial_port: Serial port path (e.g. ``/dev/ttyACM0``, ``COM3``).
+                If ``None``, the object is constructed but not connected.
+            baudrate: Serial baud rate.
+            cycle_frequency: Hardware cycle frequency in Hz.
+            nr_output_channels: Number of output channels.
+            nr_trigger_channels: Number of trigger channels.
+            **kwargs: Additional keyword arguments (ignored).
         """
         super().__init__()
 
@@ -81,7 +96,8 @@ class PulsePal:
             if hasattr(self, k):
                 setattr(self, k, v)
 
-        self.connect(serial_port=serial_port, baudrate=baudrate)
+        if serial_port is not None:
+            self.connect(serial_port=serial_port, baudrate=baudrate)
 
     @property
     def config(self) -> PulsePalConfig:
@@ -152,7 +168,8 @@ class PulsePal:
     def _pulsepal_handshake(self):
         """Confirm connectivity with hardware.
 
-        :return: handshake success bool
+        Returns:
+            True if handshake succeeded.
         """
         self._arcom.serial_object.write(
             self.encoded_opcode + str.encode(SendMessageHeader.HANDSHAKE)
@@ -186,13 +203,18 @@ class PulsePal:
 
         return bool(handshake_ok)
 
-    def connect(self, serial_port, baudrate=115200, timeout=1):
-        """Connect (& handshake) with hardware
+    def connect(
+        self, serial_port: str, baudrate: int = 115200, timeout: float = 1
+    ) -> "PulsePal":
+        """Connect to hardware and perform handshake.
 
-        :param serial_port:
-        :param baudrate:
-        :param timeout:
-        :return:
+        Args:
+            serial_port: Serial port path (e.g. ``/dev/ttyACM0``, ``COM3``).
+            baudrate: Serial baud rate.
+            timeout: Serial read timeout in seconds.
+
+        Returns:
+            Self, for method chaining.
         """
         self._arcom = ArCOM().open(
             serial_port=serial_port, baudrate=baudrate, timeout=timeout
@@ -402,12 +424,15 @@ class PulsePal:
         self._arcom.write_array(b"".join(message))
         return self._read_confirmation()
 
-    def set_resting_voltage(self, channel=None, voltage=None):
-        """Convenience function to set restingVoltage parameter on one channel.
+    def set_resting_voltage(self, channel: int, voltage: float) -> bool:
+        """Set the resting (idle) voltage on one output channel.
 
-        :param channel:
-        :param voltage:
-        :return:
+        Args:
+            channel: 0-indexed output channel.
+            voltage: Resting voltage in volts.
+
+        Returns:
+            True if hardware acknowledged the write.
         """
         return self.program_one_param(
             channel=channel,
@@ -415,11 +440,12 @@ class PulsePal:
             param_value=voltage,
         )
 
-    def set_fixed_voltage(self, channel=None, voltage=None):
+    def set_fixed_voltage(self, channel: int, voltage: float) -> bool:
         """Set a channel to a fixed DC voltage immediately, outside of any pulse train.
 
-        :param channel: 0-indexed output channel
-        :param voltage: target voltage in volts [-10, 10]
+        Args:
+            channel: 0-indexed output channel.
+            voltage: Target voltage in volts (range: −10 to +10 V).
         """
         voltage_bits = volts_to_bytes(volt=voltage, dac_bitMax=self.dac_bitMax)
         if self.model == 1:
@@ -440,9 +466,18 @@ class PulsePal:
         return self._read_confirmation()
 
     def upload_custom_pulse_train(
-        self, pulse_train_id=None, pulse_times=None, pulse_voltages=None
-    ):
-        """"""
+        self,
+        pulse_train_id: int,
+        pulse_times: list[float],
+        pulse_voltages: list[float],
+    ) -> bool:
+        """Upload a custom pulse train to hardware slot 0 or 1.
+
+        Args:
+            pulse_train_id: Slot index — 0 or 1.
+            pulse_times: Pulse onset times in seconds.
+            pulse_voltages: Output voltages in volts for each pulse.
+        """
         if pulse_train_id not in (0, 1):
             raise ValueError(f"pulse_train_id must be 0 or 1, got {pulse_train_id}")
         if len(pulse_times) != len(pulse_voltages):
@@ -477,9 +512,18 @@ class PulsePal:
         return self._read_confirmation()
 
     def upload_custom_waveform(
-        self, pulse_train_id=None, pulse_width=None, pulse_voltages=None
-    ):
-        """"""
+        self,
+        pulse_train_id: int,
+        pulse_width: float,
+        pulse_voltages: list[float],
+    ) -> bool:
+        """Upload an evenly-spaced waveform to hardware slot 0 or 1.
+
+        Args:
+            pulse_train_id: Slot index — 0 or 1.
+            pulse_width: Inter-pulse interval in seconds.
+            pulse_voltages: Output voltages in volts for each sample.
+        """
         if pulse_train_id not in (0, 1):
             raise ValueError(f"pulse_train_id must be 0 or 1, got {pulse_train_id}")
 
@@ -512,7 +556,7 @@ class PulsePal:
         self._arcom.write_array(b"".join(message))
         return self._read_confirmation()
 
-    def set_continuous(self, channel=None, state=None):
+    def set_continuous(self, channel: int, state: int) -> bool:
         message = [
             self.encoded_opcode,
             encode_message(SendMessageHeader.CONTINUOUS, encoding=ENCODING_UINT8),
@@ -522,11 +566,12 @@ class PulsePal:
         self._arcom.write_array(b"".join(message))
         return self._read_confirmation()
 
-    def set_logic(self, channel=None, level=None):
+    def set_logic(self, channel: int, level: int) -> bool:
         """Set Arduino digital logic level on an output channel (model 2, opcode 86).
 
-        :param channel: 0-indexed output channel
-        :param level: logic level (0 or 1)
+        Args:
+            channel: 0-indexed output channel.
+            level: Logic level — 0 or 1.
         """
         message = [
             self.encoded_opcode,
@@ -537,11 +582,14 @@ class PulsePal:
         self._arcom.write_array(b"".join(message))
         return self._read_confirmation()
 
-    def get_logic(self, channel=None):
+    def get_logic(self, channel: int) -> int:
         """Read current Arduino digital logic level on an output channel (opcode 87).
 
-        :param channel: 0-indexed output channel
-        :return: logic level (0 or 1)
+        Args:
+            channel: 0-indexed output channel.
+
+        Returns:
+            Logic level — 0 or 1.
         """
         message = [
             self.encoded_opcode,
@@ -553,18 +601,18 @@ class PulsePal:
 
     def trigger_selected_channels(
         self,
-        channel_1=False,
-        channel_2=False,
-        channel_3=False,
-        channel_4=False,
-    ):
-        """Trigger specific channels
+        channel_1: bool = False,
+        channel_2: bool = False,
+        channel_3: bool = False,
+        channel_4: bool = False,
+    ) -> None:
+        """Software-trigger specific output channels.
 
-        :param channel_1:
-        :param channel_2:
-        :param channel_3:
-        :param channel_4:
-        :return:
+        Args:
+            channel_1: Trigger channel 1.
+            channel_2: Trigger channel 2.
+            channel_3: Trigger channel 3.
+            channel_4: Trigger channel 4.
         """
         combination_byte = (
             (1 * channel_1) + (2 * channel_2) + (4 * channel_3) + (8 * channel_4)
@@ -582,7 +630,7 @@ class PulsePal:
         )
 
     def stop_all_outputs(self):
-        """"""
+        """Abort all currently running pulse train outputs."""
         message = [
             self.encoded_opcode,
             encode_message(SendMessageHeader.ABORT_ALL, encoding=ENCODING_UINT8),

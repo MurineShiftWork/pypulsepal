@@ -16,6 +16,17 @@ theme:
     - navigation.top
     - content.code.copy
 
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_root_heading: true
+            show_source: false
+            show_submodules: false
+
 markdown_extensions:
   - admonition
   - pymdownx.highlight:
