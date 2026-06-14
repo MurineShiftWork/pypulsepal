@@ -1540,11 +1540,11 @@
 </tr>
 <tr>
 <td><code>set_logic(channel, level)</code></td>
-<td>Set digital logic level — model 2 only</td>
+<td>Set digital logic level: model 2 only</td>
 </tr>
 <tr>
 <td><code>get_logic(channel)</code></td>
-<td>Read digital logic level — model 2 only</td>
+<td>Read digital logic level: model 2 only</td>
 </tr>
 </tbody>
 </table>
@@ -1609,7 +1609,7 @@
 </tr>
 <tr>
 <td><code>from_config(config, serial_port)</code></td>
-<td>Class method — connect and apply a <code>PulsePalConfig</code></td>
+<td>Class method: connect and apply a <code>PulsePalConfig</code></td>
 </tr>
 <tr>
 <td><code>save_settings()</code></td>
@@ -1617,11 +1617,11 @@
 </tr>
 <tr>
 <td><code>save_to_sd(filename)</code></td>
-<td>Save RAM params to SD card — model 2 only</td>
+<td>Save RAM params to SD card: model 2 only</td>
 </tr>
 <tr>
 <td><code>read_sd_params()</code></td>
-<td>Read SD card params as dict — model 2 only</td>
+<td>Read SD card params as dict: model 2 only</td>
 </tr>
 <tr>
 <td><code>reset_to_defaults()</code></td>
@@ -1633,7 +1633,7 @@
 <h2 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pypulsepal.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChannelConfig</span><span class="p">,</span> <span class="n">TriggerConfig</span><span class="p">,</span> <span class="n">PulsePalConfig</span>
 </code></pre></div>
-<p><code>PulsePalConfig</code> uses <strong>1-indexed integer keys</strong> for channels and triggers — <code>channels[1]</code> through <code>channels[4]</code>, <code>triggers[1]</code> through <code>triggers[2]</code>. String keys from JSON (<code>"1"</code>, <code>"2"</code>, …) are coerced to integers automatically.</p>
+<p><code>PulsePalConfig</code> uses <strong>1-indexed integer keys</strong> for channels and triggers: <code>channels[1]</code> through <code>channels[4]</code>, <code>triggers[1]</code> through <code>triggers[2]</code>. String keys from JSON (<code>"1"</code>, <code>"2"</code>, …) are coerced to integers automatically.</p>
 <p>See <a href="../concepts/">Concepts</a> for field-level documentation.</p>
 <hr />
 <h2 id="config_io">config_io<a class="headerlink" href="#config_io" title="Permanent link">&para;</a></h2>
@@ -2216,7 +2216,7 @@ If <code>None</code>, the object is constructed but not connected.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Logic level — 0 or 1.</p>
+                <p>Logic level: 0 or 1.</p>
               </div>
             </td>
           </tr>
@@ -2448,14 +2448,17 @@ equivalent string (<code>"normal"</code>, <code>"toggle"</code>, <code>"gated"</
 <p>Returns None if the firmware returns an unexpected byte count.
 Keys match ChannelConfig field names; 'triggerAddress' is firmware-only
 (4-element list of output channel link flags per trigger channel).</p>
-<p>SD byte layout — per output channel ×4 (42 bytes each):
-  8× uint32  phase1Duration, interPhaseInterval, phase2Duration,
-             interPulseInterval, burstDuration, interBurstInterval,
-             pulseTrainDuration, pulseTrainDelay  (firmware cycles ÷ 20000 = s)
-  1× uint8   isBiphasic
-  3× uint16  phase1Voltage, phase2Voltage, restingVoltage  (0–65535 → ±10V)
-  3× uint8   customTrainID, customTrainTarget, customTrainLoop
-Per trigger channel ×2 (5 bytes each):
+
+
+<details class="sd-byte-layout" open>
+  <summary>per output channel ×4 (42 bytes each):</summary>
+  <p>8× uint32  phase1Duration, interPhaseInterval, phase2Duration,
+           interPulseInterval, burstDuration, interBurstInterval,
+           pulseTrainDuration, pulseTrainDelay  (firmware cycles ÷ 20000 = s)
+1× uint8   isBiphasic
+3× uint16  phase1Voltage, phase2Voltage, restingVoltage  (0-65535 → ±10V)
+3× uint8   customTrainID, customTrainTarget, customTrainLoop</p>
+</details>        <p>Per trigger channel ×2 (5 bytes each):
   1× uint8   triggerMode
   4× uint8   triggerAddress[0..3]
 Total: 4×42 + 2×5 = 178 bytes</p>
@@ -2513,7 +2516,7 @@ Total: 4×42 + 2×5 = 178 bytes</p>
     <div class="doc doc-contents ">
 
         <p>Send disconnect opcode (81) to save current params on device.</p>
-<p>Firmware sends no ack byte for this opcode — confirmed on model 2 fw21.
+<p>Firmware sends no ack byte for this opcode: confirmed on model 2 fw21.
 Returns False if not connected or port is closed.</p>
 
 
@@ -2533,7 +2536,7 @@ Returns False if not connected or port is closed.</p>
     <div class="doc doc-contents ">
 
         <p>Save current RAM params to SD card (opcode 90, op 1).</p>
-<p>Firmware sends no ack byte — do not read confirmation.
+<p>Firmware sends no ack byte: do not read confirmation.
 A 100ms sleep is inserted to allow SD write to complete.</p>
 
 
@@ -2767,7 +2770,7 @@ A 100ms sleep is inserted to allow SD write to complete.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Logic level — 0 or 1.</p>
+                <p>Logic level: 0 or 1.</p>
               </div>
             </td>
             <td>

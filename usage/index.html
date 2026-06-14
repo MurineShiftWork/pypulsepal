@@ -390,7 +390,7 @@
   <a href="#sync_all_params-bulk-upload-preferred" class="md-nav__link">
     <span class="md-ellipsis">
       
-        sync_all_params() — bulk upload (preferred)
+        sync_all_params(): bulk upload (preferred)
       
     </span>
   </a>
@@ -401,7 +401,7 @@
   <a href="#upload_all-per-parameter-upload" class="md-nav__link">
     <span class="md-ellipsis">
       
-        upload_all() — per-parameter upload
+        upload_all(): per-parameter upload
       
     </span>
   </a>
@@ -412,7 +412,7 @@
   <a href="#program_one_param-single-parameter-update" class="md-nav__link">
     <span class="md-ellipsis">
       
-        program_one_param() — single parameter update
+        program_one_param(): single parameter update
       
     </span>
   </a>
@@ -423,7 +423,7 @@
   <a href="#set_resting_voltage-convenience-wrapper" class="md-nav__link">
     <span class="md-ellipsis">
       
-        set_resting_voltage() — convenience wrapper
+        set_resting_voltage(): convenience wrapper
       
     </span>
   </a>
@@ -434,7 +434,7 @@
   <a href="#set_fixed_voltage-immediate-dc-output" class="md-nav__link">
     <span class="md-ellipsis">
       
-        set_fixed_voltage() — immediate DC output
+        set_fixed_voltage(): immediate DC output
       
     </span>
   </a>
@@ -462,7 +462,7 @@
   <a href="#software-trigger-selected-channels" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Software trigger — selected channels
+        Software trigger: selected channels
       
     </span>
   </a>
@@ -473,7 +473,7 @@
   <a href="#software-trigger-all-channels" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Software trigger — all channels
+        Software trigger: all channels
       
     </span>
   </a>
@@ -694,7 +694,7 @@
   <a href="#sync_all_params-bulk-upload-preferred" class="md-nav__link">
     <span class="md-ellipsis">
       
-        sync_all_params() — bulk upload (preferred)
+        sync_all_params(): bulk upload (preferred)
       
     </span>
   </a>
@@ -705,7 +705,7 @@
   <a href="#upload_all-per-parameter-upload" class="md-nav__link">
     <span class="md-ellipsis">
       
-        upload_all() — per-parameter upload
+        upload_all(): per-parameter upload
       
     </span>
   </a>
@@ -716,7 +716,7 @@
   <a href="#program_one_param-single-parameter-update" class="md-nav__link">
     <span class="md-ellipsis">
       
-        program_one_param() — single parameter update
+        program_one_param(): single parameter update
       
     </span>
   </a>
@@ -727,7 +727,7 @@
   <a href="#set_resting_voltage-convenience-wrapper" class="md-nav__link">
     <span class="md-ellipsis">
       
-        set_resting_voltage() — convenience wrapper
+        set_resting_voltage(): convenience wrapper
       
     </span>
   </a>
@@ -738,7 +738,7 @@
   <a href="#set_fixed_voltage-immediate-dc-output" class="md-nav__link">
     <span class="md-ellipsis">
       
-        set_fixed_voltage() — immediate DC output
+        set_fixed_voltage(): immediate DC output
       
     </span>
   </a>
@@ -766,7 +766,7 @@
   <a href="#software-trigger-selected-channels" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Software trigger — selected channels
+        Software trigger: selected channels
       
     </span>
   </a>
@@ -777,7 +777,7 @@
   <a href="#software-trigger-all-channels" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Software trigger — all channels
+        Software trigger: all channels
       
     </span>
   </a>
@@ -917,32 +917,32 @@
 <h1 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h1>
 <h2 id="uploading-parameters-to-the-device">Uploading parameters to the device<a class="headerlink" href="#uploading-parameters-to-the-device" title="Permanent link">&para;</a></h2>
 <p>Two methods upload the current in-memory channel and trigger configs to the device.</p>
-<h3 id="sync_all_params-bulk-upload-preferred"><code>sync_all_params()</code> — bulk upload (preferred)<a class="headerlink" href="#sync_all_params-bulk-upload-preferred" title="Permanent link">&para;</a></h3>
+<h3 id="sync_all_params-bulk-upload-preferred"><code>sync_all_params()</code>: bulk upload (preferred)<a class="headerlink" href="#sync_all_params-bulk-upload-preferred" title="Permanent link">&para;</a></h3>
 <p>Sends all parameters in a single serial write. Faster and less error-prone than iterating parameter by parameter.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">pp</span><span class="o">.</span><span class="n">channel_configs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">phase1Voltage</span> <span class="o">=</span> <span class="mf">5.0</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">pp</span><span class="o">.</span><span class="n">channel_configs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">phase1Duration</span> <span class="o">=</span> <span class="mf">0.002</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">pp</span><span class="o">.</span><span class="n">sync_all_params</span><span class="p">()</span>
 </code></pre></div>
-<h3 id="upload_all-per-parameter-upload"><code>upload_all()</code> — per-parameter upload<a class="headerlink" href="#upload_all-per-parameter-upload" title="Permanent link">&para;</a></h3>
+<h3 id="upload_all-per-parameter-upload"><code>upload_all()</code>: per-parameter upload<a class="headerlink" href="#upload_all-per-parameter-upload" title="Permanent link">&para;</a></h3>
 <p>Sends one serial round-trip per parameter. Use when you need to confirm each parameter individually, or for compatibility with older firmware.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">pp</span><span class="o">.</span><span class="n">upload_all</span><span class="p">()</span>
 </code></pre></div>
-<h3 id="program_one_param-single-parameter-update"><code>program_one_param()</code> — single parameter update<a class="headerlink" href="#program_one_param-single-parameter-update" title="Permanent link">&para;</a></h3>
+<h3 id="program_one_param-single-parameter-update"><code>program_one_param()</code>: single parameter update<a class="headerlink" href="#program_one_param-single-parameter-update" title="Permanent link">&para;</a></h3>
 <p>Updates a single parameter on a single channel without uploading everything.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">pp</span><span class="o">.</span><span class="n">program_one_param</span><span class="p">(</span><span class="n">channel</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">param_name</span><span class="o">=</span><span class="s2">&quot;phase1Voltage&quot;</span><span class="p">,</span> <span class="n">param_value</span><span class="o">=</span><span class="mf">3.0</span><span class="p">)</span>
 </code></pre></div>
-<h3 id="set_resting_voltage-convenience-wrapper"><code>set_resting_voltage()</code> — convenience wrapper<a class="headerlink" href="#set_resting_voltage-convenience-wrapper" title="Permanent link">&para;</a></h3>
+<h3 id="set_resting_voltage-convenience-wrapper"><code>set_resting_voltage()</code>: convenience wrapper<a class="headerlink" href="#set_resting_voltage-convenience-wrapper" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">pp</span><span class="o">.</span><span class="n">set_resting_voltage</span><span class="p">(</span><span class="n">channel</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">voltage</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
 </code></pre></div>
-<h3 id="set_fixed_voltage-immediate-dc-output"><code>set_fixed_voltage()</code> — immediate DC output<a class="headerlink" href="#set_fixed_voltage-immediate-dc-output" title="Permanent link">&para;</a></h3>
+<h3 id="set_fixed_voltage-immediate-dc-output"><code>set_fixed_voltage()</code>: immediate DC output<a class="headerlink" href="#set_fixed_voltage-immediate-dc-output" title="Permanent link">&para;</a></h3>
 <p>Sets a channel to a fixed DC voltage immediately, outside of any pulse train sequence.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">pp</span><span class="o">.</span><span class="n">set_fixed_voltage</span><span class="p">(</span><span class="n">channel</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">voltage</span><span class="o">=</span><span class="mf">3.3</span><span class="p">)</span>
 </code></pre></div>
 <h2 id="triggering-channels">Triggering channels<a class="headerlink" href="#triggering-channels" title="Permanent link">&para;</a></h2>
-<h3 id="software-trigger-selected-channels">Software trigger — selected channels<a class="headerlink" href="#software-trigger-selected-channels" title="Permanent link">&para;</a></h3>
+<h3 id="software-trigger-selected-channels">Software trigger: selected channels<a class="headerlink" href="#software-trigger-selected-channels" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">pp</span><span class="o">.</span><span class="n">trigger_selected_channels</span><span class="p">(</span><span class="n">channel_1</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">channel_3</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
-<h3 id="software-trigger-all-channels">Software trigger — all channels<a class="headerlink" href="#software-trigger-all-channels" title="Permanent link">&para;</a></h3>
+<h3 id="software-trigger-all-channels">Software trigger: all channels<a class="headerlink" href="#software-trigger-all-channels" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">pp</span><span class="o">.</span><span class="n">trigger_all_channels</span><span class="p">()</span>
 </code></pre></div>
 <h3 id="stopping-output">Stopping output<a class="headerlink" href="#stopping-output" title="Permanent link">&para;</a></h3>
