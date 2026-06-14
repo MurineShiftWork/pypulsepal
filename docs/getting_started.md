@@ -34,7 +34,7 @@ On connection, `PulsePal` performs a handshake, reads the firmware version to de
 
 ## Basic pulse train
 
-Channels are **0-indexed** in the Python API (channels 0–3, triggers 0–1).
+Channels are **0-indexed** in the Python API (channels 0-3, triggers 0-1).
 
 ```python
 import time

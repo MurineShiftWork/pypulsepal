@@ -42,8 +42,8 @@ from pypulsepal import PulsePal
 | `set_resting_voltage(channel, voltage)` | Set `restingVoltage` on one channel |
 | `set_fixed_voltage(channel, voltage)` | Set immediate DC voltage outside pulse train |
 | `set_continuous(channel, state)` | Start (1) or stop (0) continuous output on a channel |
-| `set_logic(channel, level)` | Set digital logic level — model 2 only |
-| `get_logic(channel)` | Read digital logic level — model 2 only |
+| `set_logic(channel, level)` | Set digital logic level: model 2 only |
+| `get_logic(channel)` | Read digital logic level: model 2 only |
 
 ### Triggering
 
@@ -66,10 +66,10 @@ from pypulsepal import PulsePal
 |---|---|
 | `save_config(path)` | Save in-memory config to JSON or YAML |
 | `load_config(path)` | Load config from JSON or YAML and apply in memory |
-| `from_config(config, serial_port)` | Class method — connect and apply a `PulsePalConfig` |
+| `from_config(config, serial_port)` | Class method: connect and apply a `PulsePalConfig` |
 | `save_settings()` | Send disconnect opcode to persist params on device |
-| `save_to_sd(filename)` | Save RAM params to SD card — model 2 only |
-| `read_sd_params()` | Read SD card params as dict — model 2 only |
+| `save_to_sd(filename)` | Save RAM params to SD card: model 2 only |
+| `read_sd_params()` | Read SD card params as dict: model 2 only |
 | `reset_to_defaults()` | Reset all configs to defaults and sync to device |
 
 ---
@@ -80,7 +80,7 @@ from pypulsepal import PulsePal
 from pypulsepal.models import ChannelConfig, TriggerConfig, PulsePalConfig
 ```
 
-`PulsePalConfig` uses **1-indexed integer keys** for channels and triggers — `channels[1]` through `channels[4]`, `triggers[1]` through `triggers[2]`. String keys from JSON (`"1"`, `"2"`, …) are coerced to integers automatically.
+`PulsePalConfig` uses **1-indexed integer keys** for channels and triggers: `channels[1]` through `channels[4]`, `triggers[1]` through `triggers[2]`. String keys from JSON (`"1"`, `"2"`, …) are coerced to integers automatically.
 
 See [Concepts](concepts.md) for field-level documentation.
 

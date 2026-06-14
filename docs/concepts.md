@@ -31,7 +31,7 @@ cfg.phase1Voltage = 15.0       # raises ValidationError
 
 | Field | Type | Default | Unit | Notes |
 |---|---|---|---|---|
-| `isBiphasic` | bool | `False` | — | Biphasic pulse mode |
+| `isBiphasic` | bool | `False` |: | Biphasic pulse mode |
 | `phase1Voltage` | float | `5.0` | V | Range −10 to +10 |
 | `phase2Voltage` | float | `−5.0` | V | Range −10 to +10 |
 | `restingVoltage` | float | `0.0` | V | Range −10 to +10 |
@@ -43,11 +43,11 @@ cfg.phase1Voltage = 15.0       # raises ValidationError
 | `interBurstInterval` | float | `0.0` | s | 0 = bursts disabled |
 | `pulseTrainDuration` | float | `1.0` | s | Must be ≥ 0 |
 | `pulseTrainDelay` | float | `0.0` | s | Must be ≥ 0 |
-| `linkTriggerChannel1` | int | `1` | — | 0 or 1 |
-| `linkTriggerChannel2` | int | `0` | — | 0 or 1 |
-| `customTrainID` | int | `0` | — | 0 = train 1, 1 = train 2 |
-| `customTrainTarget` | int | `0` | — | 0 = pulse times, 1 = burst times |
-| `customTrainLoop` | int | `0` | — | 0 = once, 1 = loop |
+| `linkTriggerChannel1` | int | `1` |: | 0 or 1 |
+| `linkTriggerChannel2` | int | `0` |: | 0 or 1 |
+| `customTrainID` | int | `0` |: | 0 = train 1, 1 = train 2 |
+| `customTrainTarget` | int | `0` |: | 0 = pulse times, 1 = burst times |
+| `customTrainLoop` | int | `0` |: | 0 = once, 1 = loop |
 
 ## Trigger configuration
 
@@ -64,7 +64,7 @@ Each of the 2 trigger channels is described by a `TriggerConfig` model.
 ## PulsePalConfig
 
 `PulsePalConfig` holds the full device state: 4 channel configs and 2 trigger configs.
-Channels and triggers are keyed by their **1-indexed hardware number** (1–4 for channels, 1–2 for triggers), so there is never any ambiguity from list ordering.
+Channels and triggers are keyed by their **1-indexed hardware number** (1-4 for channels, 1-2 for triggers), so there is never any ambiguity from list ordering.
 
 ```python
 from pypulsepal.models import PulsePalConfig, ChannelConfig, TriggerConfig

@@ -4,7 +4,7 @@
 
 Two methods upload the current in-memory channel and trigger configs to the device.
 
-### `sync_all_params()` — bulk upload (preferred)
+### `sync_all_params()`: bulk upload (preferred)
 
 Sends all parameters in a single serial write. Faster and less error-prone than iterating parameter by parameter.
 
@@ -14,7 +14,7 @@ pp.channel_configs[0].phase1Duration = 0.002
 pp.sync_all_params()
 ```
 
-### `upload_all()` — per-parameter upload
+### `upload_all()`: per-parameter upload
 
 Sends one serial round-trip per parameter. Use when you need to confirm each parameter individually, or for compatibility with older firmware.
 
@@ -22,7 +22,7 @@ Sends one serial round-trip per parameter. Use when you need to confirm each par
 pp.upload_all()
 ```
 
-### `program_one_param()` — single parameter update
+### `program_one_param()`: single parameter update
 
 Updates a single parameter on a single channel without uploading everything.
 
@@ -30,13 +30,13 @@ Updates a single parameter on a single channel without uploading everything.
 pp.program_one_param(channel=0, param_name="phase1Voltage", param_value=3.0)
 ```
 
-### `set_resting_voltage()` — convenience wrapper
+### `set_resting_voltage()`: convenience wrapper
 
 ```python
 pp.set_resting_voltage(channel=0, voltage=0.0)
 ```
 
-### `set_fixed_voltage()` — immediate DC output
+### `set_fixed_voltage()`: immediate DC output
 
 Sets a channel to a fixed DC voltage immediately, outside of any pulse train sequence.
 
@@ -46,13 +46,13 @@ pp.set_fixed_voltage(channel=0, voltage=3.3)
 
 ## Triggering channels
 
-### Software trigger — selected channels
+### Software trigger: selected channels
 
 ```python
 pp.trigger_selected_channels(channel_1=True, channel_3=True)
 ```
 
-### Software trigger — all channels
+### Software trigger: all channels
 
 ```python
 pp.trigger_all_channels()

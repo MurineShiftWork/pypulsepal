@@ -623,7 +623,7 @@ class PulsePal:
 
         Args:
             channel: 0-indexed output channel.
-            level: Logic level — 0 or 1.
+            level: Logic level: 0 or 1.
         """
         message = [
             self.encoded_opcode,
@@ -641,7 +641,7 @@ class PulsePal:
             channel: 0-indexed output channel.
 
         Returns:
-            Logic level — 0 or 1.
+            Logic level: 0 or 1.
         """
         message = [
             self.encoded_opcode,
@@ -693,7 +693,7 @@ class PulsePal:
     def save_settings(self) -> bool:
         """Send disconnect opcode (81) to save current params on device.
 
-        Firmware sends no ack byte for this opcode — confirmed on model 2 fw21.
+        Firmware sends no ack byte for this opcode: confirmed on model 2 fw21.
         Returns False if not connected or port is closed.
         """
         if self._arcom is None:
@@ -713,7 +713,7 @@ class PulsePal:
     def save_to_sd(self, filename: str = "default.pps") -> None:
         """Save current RAM params to SD card (opcode 90, op 1).
 
-        Firmware sends no ack byte — do not read confirmation.
+        Firmware sends no ack byte: do not read confirmation.
         A 100ms sleep is inserted to allow SD write to complete.
         """
         if self._arcom is None:
@@ -736,12 +736,12 @@ class PulsePal:
         Keys match ChannelConfig field names; 'triggerAddress' is firmware-only
         (4-element list of output channel link flags per trigger channel).
 
-        SD byte layout — per output channel ×4 (42 bytes each):
+        SD byte layout: per output channel ×4 (42 bytes each):
           8× uint32  phase1Duration, interPhaseInterval, phase2Duration,
                      interPulseInterval, burstDuration, interBurstInterval,
                      pulseTrainDuration, pulseTrainDelay  (firmware cycles ÷ 20000 = s)
           1× uint8   isBiphasic
-          3× uint16  phase1Voltage, phase2Voltage, restingVoltage  (0–65535 → ±10V)
+          3× uint16  phase1Voltage, phase2Voltage, restingVoltage  (0-65535 → ±10V)
           3× uint8   customTrainID, customTrainTarget, customTrainLoop
         Per trigger channel ×2 (5 bytes each):
           1× uint8   triggerMode
