@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     if: "!startsWith(github.event.head_commit.message, 'bump:')"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -32,7 +32,7 @@ jobs:
         id: bump
         run: |
           uvx --from commitizen cz bump --yes || EXIT=$?
-          if [ "${EXIT:-0}" -eq 21 ]; then
+          if [ "${EXIT:-0}" -eq 21 ] || [ "${EXIT:-0}" -eq 6 ]; then
             echo "No bumpable commits since last tag — skipping."
             echo "skipped=true" >> "$GITHUB_OUTPUT"
             exit 0
