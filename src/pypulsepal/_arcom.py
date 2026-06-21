@@ -39,7 +39,7 @@ class ArduinoTypes:
             return ArduinoTypes.get_uint8_array(array)
         elif dtype == ArduinoTypes.UINT16:
             return ArduinoTypes.get_uint16_array(array)
-        elif dtype == ArduinoTypes.UINT32 or dtype == ArduinoTypes.FLOAT:
+        elif dtype == ArduinoTypes.UINT32 or dtype == ArduinoTypes.FLOAT32:
             return ArduinoTypes.get_uint32_array(array)
         else:
             return None
