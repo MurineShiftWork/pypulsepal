@@ -20,26 +20,6 @@ PARAM_CODES = {
     128: "triggerMode",
 }
 PARAM_NAMES = {v: k for k, v in PARAM_CODES.items()}
-CHANNEL_PARAM_DEFAULTS = {
-    "isBiphasic": False,
-    "phase1Voltage": 5,
-    "phase2Voltage": -5,
-    "phase1Duration": 0.001,
-    "interPhaseInterval": 0.001,
-    "phase2Duration": 0.001,
-    "interPulseInterval": 0.01,
-    "burstDuration": 0,
-    "interBurstInterval": 0,
-    "pulseTrainDuration": 1,
-    "pulseTrainDelay": 0,
-    "linkTriggerChannel1": 1,
-    "linkTriggerChannel2": 0,
-    "customTrainID": 0,
-    "customTrainTarget": 0,
-    "customTrainLoop": 0,
-    "restingVoltage": 0,
-    # "triggerMode": 0,  # not a channel param
-}
 CHANNEL_PARAM_TEST = {
     "isBiphasic": False,
     "phase1Voltage": 1.85,
@@ -62,9 +42,6 @@ CHANNEL_PARAM_TEST = {
 }
 TRIGGER_PARAM_TEST = {
     "triggerMode": 2,
-}
-TRIGGER_PARAM_DEFAULTS = {
-    "triggerMode": 0,
 }
 TRIGGER_MODE_VALUES = {
     0: "normal",
@@ -201,17 +178,3 @@ def resolve_param_name_code_pair(param_name_or_code=None):
 
     assert param_name is not None and param_code is not None
     return param_name, param_code
-
-
-def resolve_trigger_name_code_pair(trigger_name_or_code=None):
-    """Expect trigger parameter name or code (integer) and return both name and code."""
-    trigger_name = trigger_code = trigger_name_or_code
-    if isinstance(trigger_name_or_code, str):
-        trigger_code = PARAM_NAMES.get(trigger_name_or_code)
-    elif isinstance(trigger_name_or_code, int):
-        trigger_name = PARAM_CODES.get(trigger_name_or_code)
-    else:
-        raise ValueError(trigger_name_or_code)
-
-    assert trigger_name is not None and trigger_code is not None
-    return trigger_name, trigger_code
