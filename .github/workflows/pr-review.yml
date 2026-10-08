@@ -21,7 +21,7 @@ jobs:
   #
   # llm-review-claude:
   #   name: Claude PR review
-  #   runs-on: ubuntu-latest
+  #   runs-on: ubuntu-26.04
   #   steps:
   #     - uses: actions/checkout@v6
   #       with:
@@ -94,6 +94,6 @@ jobs:
   # Placeholder — remove once an option above is uncommented
   no-op:
     name: LLM review (not configured)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - run: echo "LLM PR review not configured. See .github/workflows/pr-review.yml."
