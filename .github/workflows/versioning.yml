@@ -17,8 +17,16 @@ jobs:
     # Skip the bump the bot itself just pushed (avoids a loop).
     if: "!startsWith(github.event.head_commit.message, 'bump:')"
     steps:
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          app-id: ${{ secrets.MURINESHIFTWORK_CI_CLIENT_ID }}
+          private-key: ${{ secrets.MURINESHIFTWORK_CI_PRIVATE_KEY }}
+          permission-contents: write
+
       - uses: actions/checkout@v6
         with:
+          token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0
 
       - name: Configure git identity
@@ -30,7 +38,7 @@ jobs:
 
       - name: Bump, tag, trigger release
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           uvx --from commitizen cz bump --yes || EXIT=$?
           if [ "${EXIT:-0}" -eq 21 ] || [ "${EXIT:-0}" -eq 6 ]; then
