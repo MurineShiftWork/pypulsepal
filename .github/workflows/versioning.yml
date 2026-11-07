@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: write
-  actions: write  # to dispatch release.yml
 
 jobs:
   version:
@@ -36,7 +35,7 @@ jobs:
 
       - uses: astral-sh/setup-uv@v7
 
-      - name: Bump, tag, trigger release
+      - name: Bump and tag
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
@@ -48,7 +47,6 @@ jobs:
           [ "${EXIT:-0}" -eq 0 ] || exit $EXIT
           VERSION="v$(cat VERSION)"
           git push origin HEAD:main
+          # Pushed with the App token, so the tag triggers release.yml's push:tags
+          # (a GITHUB_TOKEN push would not). No dispatch: it would publish twice.
           git push origin "$VERSION"
-          # A GITHUB_TOKEN-pushed tag does NOT trigger release.yml's push:tags,
-          # so dispatch the publish explicitly for the automatic path.
-          gh workflow run release.yml -f tag="$VERSION"
