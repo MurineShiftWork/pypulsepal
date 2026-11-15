@@ -80,15 +80,16 @@ Please also cite the original [PulsePal](https://github.com/sanworks/PulsePal) h
 
 ## License & sources
 
-This software is released under the **[GNU GPL v3.0](LICENSE)**.
+This software is licensed under the **[BSD 3-Clause License](LICENSE)**.
 
-This work is derived from the [Sanworks PulsePal Python API](https://github.com/sanworks/PulsePal/tree/develop) ([commit: 5bb189f](https://github.com/sanworks/PulsePal/commit/5bb189fec8d7435433b8c23f7bae520f92e271af)).
+It implements the PulsePal USB serial protocol as documented on the PulsePal wiki: [USB interface v2.x](https://sites.google.com/site/pulsepalwiki/usb-serial-interface/usb-interface-v2-x), [USB interface v1.x](https://sites.google.com/site/pulsepalwiki/usb-serial-interface/usb-interface-v1-x) and the [parameter guide](https://sites.google.com/site/pulsepalwiki/parameter-guide).
+
+Releases before 0.4.4 were published under the GNU GPL v3.0 and remain under that licence.
 
 `src/pypulsepal/_arcom.py` is vendored from [pybpod-api](https://github.com/pybpod/pybpod-api) 1.8.2 (MIT, Copyright © 2016 Champalimaud Foundation) with minor adaptations.
 
 ## Useful references
 
-- [PulsePal Python 3 API](https://github.com/sanworks/PulsePal/blob/develop/Python/Python3/PulsePal.py)
 - [PulsePal USB v2 serial interface](https://sites.google.com/site/pulsepalwiki/usb-serial-interface/usb-interface-v2-x)
-- [PulsePal parameter definitions](https://sites.google.com/site/pulsepalwiki/matlab-gnu-octave/functions/programpulsepalparam)
+- [PulsePal parameter guide](https://sites.google.com/site/pulsepalwiki/parameter-guide)
 - [PyBpod ArCOM](https://github.com/pybpod/pybpod-api/blob/master/pybpodapi/com/arcom.py)

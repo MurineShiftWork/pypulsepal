@@ -2,31 +2,47 @@ import contextlib
 import logging
 import struct
 import time
+from collections.abc import Sequence
 from typing import Any
 
 from pypulsepal._arcom import ArCOM
 from pypulsepal.definitions import (
+    CLIENT_NAME,
     CUSTOM_PULSE_TRAIN_OPCODES,
-    PARAM_DTYPE_MODEL_1,
-    PARAM_DTYPE_MODEL_2,
+    DAC_MAX,
+    MODEL_2_MIN_FIRMWARE,
+    PARAM_DTYPES,
     PARAM_SCALING,
     PULSEPAL_CYCLE_FREQUENCY,
+    SD_SAVE,
+    TIME_PARAMS,
     TRIGGER_MODE_NAMES,
     VOLTAGE_PARAM_NAMES,
+    VOLTAGE_PARAMS,
     ReceiveMessageHeader,
     SendMessageHeader,
     resolve_param_name_code_pair,
 )
 from pypulsepal.models import ChannelConfig, PulsePalConfig, TriggerConfig
-from pypulsepal.utils import encode_message, volts_to_bytes
+from pypulsepal.utils import V_MIN, V_SPAN, encode_message, volts_to_dac
 
-ENCODING_UINT8 = "uint8"
+log = logging.getLogger(__name__)
+
+
+def _u8(value) -> bytes:
+    return encode_message(value, encoding="uint8")
+
+
+def _u16(value) -> bytes:
+    return encode_message(value, encoding="uint16")
+
+
+def _u32(value) -> bytes:
+    return encode_message(value, encoding="uint32")
 
 
 class PulsePalError(Exception):
-    """Convenience error object for PulsePal"""
-
-    pass
+    """Raised when a PulsePal does not answer the handshake."""
 
 
 class PulsePal:
@@ -43,20 +59,22 @@ class PulsePal:
         >>> pp.save_settings()
     """
 
-    # communication
+    # serial link
     _arcom: Any = None
     serial_port: str | None = None
     baudrate: int = 115200
 
-    # hardware attributes
+    # filled in by the handshake
     firmware_version: int | None = None
     model: int | None = None
-    dac_bitMax: int | None = None
-    cycle_frequency: int = 20000
+    dac_max: int | None = None
+    param_dtype_lookup: Any = None
+
+    # device layout and framing
+    cycle_frequency: int = PULSEPAL_CYCLE_FREQUENCY
     nr_output_channels: int = 4
     nr_trigger_channels: int = 2
     opcode: int = 213
-    param_dtype_lookup: Any = None
 
     def __init__(
         self,
@@ -77,10 +95,9 @@ class PulsePal:
             cycle_frequency: Hardware cycle frequency in Hz.
             nr_output_channels: Number of output channels.
             nr_trigger_channels: Number of trigger channels.
-            **kwargs: Additional keyword arguments (ignored).
+            opcode: Prefix byte that starts every message.
+            **kwargs: Overrides for other existing attributes; unknown names are ignored.
         """
-        super().__init__()
-
         self.serial_port = serial_port
         self.baudrate = baudrate
         self.cycle_frequency = cycle_frequency
@@ -91,10 +108,9 @@ class PulsePal:
         self.channel_configs = [ChannelConfig() for _ in range(nr_output_channels)]
         self.trigger_configs = [TriggerConfig() for _ in range(nr_trigger_channels)]
 
-        # Convenience updates for debug inputs
-        for k, v in kwargs.items():
-            if hasattr(self, k):
-                setattr(self, k, v)
+        for name, value in kwargs.items():
+            if hasattr(self, name):
+                setattr(self, name, value)
 
         if serial_port is not None:
             self.connect(serial_port=serial_port, baudrate=baudrate)
@@ -161,60 +177,68 @@ class PulsePal:
         ]
         self.sync_all_params()
 
+    # ------------------------------------------------------------------
+    # framing
+    # ------------------------------------------------------------------
+
     @property
-    def encoded_opcode(self):
-        """The handshake opcode byte encoded for serial transmission."""
-        return encode_message(self.opcode, encoding=ENCODING_UINT8)
+    def encoded_opcode(self) -> bytes:
+        """The prefix byte that starts every message, packed for the wire."""
+        return _u8(self.opcode)
 
     @encoded_opcode.setter
     def encoded_opcode(self, value=None):
         self.opcode = value
 
-    def _clear_read_queue(self):
-        """Clears leftover items from serial read queue"""
-        return self._arcom.serial_object.read(self._arcom.serial_object.inWaiting())
+    @property
+    def _voltage_dtype(self) -> str:
+        return "uint8" if self.model == 1 else "uint16"
 
-    def _read_confirmation(self):
-        """Returns True for successful receipt of previous message"""
-        return self._arcom.read_uint8() == 1
+    def _frame(self, opcode: int, *fields: bytes) -> bytes:
+        """Prefix byte, opcode byte, then the already packed fields."""
+        return self.encoded_opcode + _u8(opcode) + b"".join(fields)
 
-    def _pulsepal_handshake(self):
-        """Confirm connectivity with hardware.
+    def _send(self, opcode: int, *fields: bytes) -> None:
+        self._arcom.write_array(self._frame(opcode, *fields))
+
+    def _send_and_confirm(self, opcode: int, *fields: bytes) -> bool:
+        self._send(opcode, *fields)
+        return self._read_confirmation()
+
+    def _clear_read_queue(self) -> bytes:
+        """Read and discard whatever is waiting in the serial input buffer."""
+        port = self._arcom.serial_object
+        return port.read(port.inWaiting())
+
+    def _read_confirmation(self) -> bool:
+        """Read one reply byte; True if it is the acknowledge value."""
+        return self._arcom.read_uint8() == ReceiveMessageHeader.ACK
+
+    # ------------------------------------------------------------------
+    # connection
+    # ------------------------------------------------------------------
+
+    def _pulsepal_handshake(self) -> bool:
+        """Handshake, detect the hardware model from the firmware build, send the client name.
 
         Returns:
-            True if handshake succeeded.
+            True if the device answered with the handshake acknowledge.
         """
         self._arcom.serial_object.write(
-            self.encoded_opcode + str.encode(SendMessageHeader.HANDSHAKE)
+            self.encoded_opcode + SendMessageHeader.HANDSHAKE.encode("ascii")
         )
-        handshake = self._arcom.read_char()
+        reply = self._arcom.read_char()
         firmware_version = self._arcom.read_uint32()
         self._clear_read_queue()
+        if reply != ReceiveMessageHeader.HANDSHAKE_OK:
+            return False
 
-        handshake_ok = handshake == ReceiveMessageHeader.HANDSHAKE_OK
-        if handshake_ok:
-            self.firmware_version = firmware_version
-            if firmware_version < 20:
-                self.model = 1
-                self.dac_bitMax = 255
-                self.param_dtype_lookup = PARAM_DTYPE_MODEL_1
-            else:
-                self.model = 2
-                self.dac_bitMax = 65535
-                self.param_dtype_lookup = PARAM_DTYPE_MODEL_2
-            if firmware_version == 20:
-                logging.warning(
-                    "Firmware v20 has a bug in Pulse Gated trigger mode when used with "
-                    "multiple inputs. See https://sites.google.com/site/pulsepalwiki/updating-firmware"
-                )
-            # Send client name
-            self._arcom.write_array(
-                self.encoded_opcode
-                + encode_message(SendMessageHeader.CLIENT_ID, encoding=ENCODING_UINT8)
-                + str.encode("PYTHON")
-            )
-
-        return bool(handshake_ok)
+        self.firmware_version = firmware_version
+        self.model = 2 if firmware_version >= MODEL_2_MIN_FIRMWARE else 1
+        self.dac_max = DAC_MAX[self.model]
+        self.param_dtype_lookup = PARAM_DTYPES[self.model]
+        self._send(SendMessageHeader.CLIENT_ID, CLIENT_NAME)
+        return True
 
     def connect(
         self, serial_port: str, baudrate: int = 115200, timeout: float = 1
@@ -232,11 +256,9 @@ class PulsePal:
         self._arcom = ArCOM().open(
             serial_port=serial_port, baudrate=baudrate, timeout=timeout
         )
-        handshake_ok = self._pulsepal_handshake()
-        if not handshake_ok:
+        if not self._pulsepal_handshake():
             raise PulsePalError(
-                f"Could not connect PulsePal at '{serial_port}' "
-                f"with baudrate {baudrate}"
+                f"No handshake from a PulsePal at '{serial_port}' (baudrate {baudrate})"
             )
         self._pulsepal_set_display(
             row1="PulsePal", row2=f"Python fw{self.firmware_version}"
@@ -252,13 +274,11 @@ class PulsePal:
             b = s[:16].encode("ascii")
             return bytes([len(b)]) + b + b" " * (16 - len(b))
 
-        msg = (
-            self.encoded_opcode
-            + encode_message(SendMessageHeader.DISPLAY, encoding=ENCODING_UINT8)
-            + _row(row1)
-            + _row(row2)
-        )
-        self._arcom.write_array(msg)
+        self._send(SendMessageHeader.DISPLAY, _row(row1), _row(row2))
+
+    # ------------------------------------------------------------------
+    # parameters
+    # ------------------------------------------------------------------
 
     def _update_param(self, channel, param_name, param_value):
         """Write a confirmed hardware value back into the in-memory config objects."""
@@ -266,6 +286,16 @@ class PulsePal:
             setattr(self.channel_configs[channel], param_name, param_value)
         elif param_name in TriggerConfig.model_fields:
             setattr(self.trigger_configs[channel], param_name, param_value)
+
+    def _dac(self, volts: float) -> int:
+        if self.dac_max is None:
+            raise PulsePalError("DAC range unknown: connect to a PulsePal first")
+        return volts_to_dac(volts, self.dac_max)
+
+    def _to_wire(self, param_name: str, value):
+        if param_name in VOLTAGE_PARAM_NAMES:
+            return self._dac(value)
+        return value * PARAM_SCALING[param_name]
 
     def program_one_param(self, channel=None, param_name=None, param_value=None):
         """Send a single parameter update to hardware and mirror it in the in-memory config.
@@ -279,34 +309,18 @@ class PulsePal:
         Returns:
             True if hardware acknowledged the write.
         """
-        original_value = param_value
-        param_name, param_code = resolve_param_name_code_pair(
-            param_name_or_code=param_name
+        name, code = resolve_param_name_code_pair(param_name_or_code=param_name)
+        value = encode_message(
+            self._to_wire(name, param_value), encoding=self.param_dtype_lookup[name]
         )
-        param_dtype = self.param_dtype_lookup.get(param_name)
-        param_scaling = PARAM_SCALING.get(param_name)
-
-        if param_name in VOLTAGE_PARAM_NAMES:
-            wire_value = volts_to_bytes(volt=param_value, dac_bitMax=self.dac_bitMax)
-        else:
-            wire_value = param_value * param_scaling
-
-        message = [
-            self.encoded_opcode,
-            encode_message(SendMessageHeader.PROGRAM_ONE, encoding=ENCODING_UINT8),
-            encode_message(param_code, encoding=ENCODING_UINT8),
-            encode_message(channel + 1, encoding=ENCODING_UINT8),
-            encode_message(wire_value, encoding=param_dtype),
-        ]
-        self._arcom.write_array(b"".join(message))
-
-        write_ok = self._read_confirmation()
-        if write_ok:
+        ok = self._send_and_confirm(
+            SendMessageHeader.PROGRAM_ONE, _u8(code), _u8(channel + 1), value
+        )
+        if ok:
             self._update_param(
-                channel=channel, param_name=param_name, param_value=original_value
+                channel=channel, param_name=name, param_value=param_value
             )
-
-        return write_ok
+        return ok
 
     def program_trigger_channel(self, trigger_channel=None, trigger_mode=None):
         """Set the trigger mode for one trigger input channel.
@@ -320,47 +334,43 @@ class PulsePal:
             True if hardware acknowledged the write.
         """
         if isinstance(trigger_mode, str):
-            mode_value = TRIGGER_MODE_NAMES.get(trigger_mode)
-            if mode_value is None:
+            if trigger_mode not in TRIGGER_MODE_NAMES:
                 raise ValueError(
                     f"Unknown trigger mode {trigger_mode!r}; valid: {list(TRIGGER_MODE_NAMES)}"
                 )
-        else:
-            mode_value = int(trigger_mode)
-        write_ok = self.program_one_param(
+            trigger_mode = TRIGGER_MODE_NAMES[trigger_mode]
+        return self.program_one_param(
             channel=trigger_channel,
             param_name="triggerMode",
-            param_value=mode_value,
+            param_value=int(trigger_mode),
         )
-        return write_ok
 
     def upload_all(self):
         """Program all channel and trigger parameters via individual serial writes.
 
         Prefer sync_all_params() for faster bulk upload.
-        """
-        for param_name in ChannelConfig.model_fields:
-            for channel in range(self.nr_output_channels):
-                param_value = getattr(self.channel_configs[channel], param_name)
-                success = self.program_one_param(
-                    channel=channel,
-                    param_name=param_name,
-                    param_value=param_value,
-                )
-                logging.debug(f"{param_name} ch{channel} = {param_value} ok: {success}")
-                if not success:
-                    raise ValueError
 
-        for channel in range(self.nr_trigger_channels):
-            param_value = self.trigger_configs[channel].triggerMode
-            success = self.program_one_param(
-                channel=channel,
-                param_name="triggerMode",
-                param_value=param_value,
+        Raises:
+            ValueError: if the device does not acknowledge a write.
+        """
+        writes = [
+            (channel, name, getattr(self.channel_configs[channel], name))
+            for name in ChannelConfig.model_fields
+            for channel in range(self.nr_output_channels)
+        ]
+        writes += [
+            (channel, "triggerMode", self.trigger_configs[channel].triggerMode)
+            for channel in range(self.nr_trigger_channels)
+        ]
+        for channel, name, value in writes:
+            ok = self.program_one_param(
+                channel=channel, param_name=name, param_value=value
             )
-            logging.debug(f"triggerMode ch{channel} = {param_value} ok: {success}")
-            if not success:
-                raise ValueError
+            log.debug("program %s on channel %d = %r: ok=%s", name, channel, value, ok)
+            if not ok:
+                raise ValueError(
+                    f"PulsePal did not acknowledge {name} on channel {channel}"
+                )
 
     def sync_all_params(self):
         """Upload all parameters in a single bulk serial write (opcode 73).
@@ -368,95 +378,57 @@ class PulsePal:
         Faster than upload_all() which does one serial round trip per parameter.
         Byte layout differs between model 1 and model 2.
         """
-        time_param_names = [
-            "phase1Duration",
-            "interPhaseInterval",
-            "phase2Duration",
-            "interPulseInterval",
-            "burstDuration",
-            "interBurstInterval",
-            "pulseTrainDuration",
-            "pulseTrainDelay",
+        channels = [self.channel_configs[i] for i in range(self.nr_output_channels)]
+        triggers = [self.trigger_configs[i] for i in range(self.nr_trigger_channels)]
+
+        cycles = [
+            int(getattr(cfg, name) * self.cycle_frequency)
+            for cfg in channels
+            for name in TIME_PARAMS
         ]
-        volt_param_names = ["phase1Voltage", "phase2Voltage", "restingVoltage"]
-
-        # 32-bit time parameters: 8 params × 4 channels, interleaved by channel
-        program_values_32 = []
-        for channel in range(self.nr_output_channels):
-            cfg = self.channel_configs[channel]
-            for param in time_param_names:
-                program_values_32.append(
-                    int(getattr(cfg, param) * self.cycle_frequency)
-                )
-
-        # Voltage and 8-bit parameters differ by model
         if self.model == 2:
-            # 16-bit voltages: 3 volt params × 4 channels
-            program_values_16 = []
-            for channel in range(self.nr_output_channels):
-                cfg = self.channel_configs[channel]
-                for param in volt_param_names:
-                    program_values_16.append(
-                        int(
-                            volts_to_bytes(
-                                volt=getattr(cfg, param), dac_bitMax=self.dac_bitMax
-                            )
-                        )
-                    )
-            # 8-bit params: 4 params × 4 channels
-            program_values_8 = []
-            for channel in range(self.nr_output_channels):
-                cfg = self.channel_configs[channel]
-                program_values_8.append(int(cfg.isBiphasic))
-                program_values_8.append(int(cfg.customTrainID))
-                program_values_8.append(int(cfg.customTrainTarget))
-                program_values_8.append(int(cfg.customTrainLoop))
-        else:  # model 1: voltages are uint8 and packed into the 8-bit section
-            program_values_16 = None
-            program_values_8 = []
+            voltages = _u16(
+                [
+                    self._dac(getattr(cfg, name))
+                    for cfg in channels
+                    for name in VOLTAGE_PARAMS
+                ]
+            )
+            per_channel = [
+                (
+                    cfg.isBiphasic,
+                    cfg.customTrainID,
+                    cfg.customTrainTarget,
+                    cfg.customTrainLoop,
+                )
+                for cfg in channels
+            ]
+        else:
+            # model 1 carries its 8-bit voltages inside the per-channel byte group
+            voltages = b""
+            per_channel = [
+                (
+                    cfg.isBiphasic,
+                    self._dac(cfg.phase1Voltage),
+                    self._dac(cfg.phase2Voltage),
+                    cfg.customTrainID,
+                    cfg.customTrainTarget,
+                    cfg.customTrainLoop,
+                    self._dac(cfg.restingVoltage),
+                )
+                for cfg in channels
+            ]
+        channel_bytes = [int(value) for group in per_channel for value in group]
+        links = [int(cfg.linkTriggerChannel1) for cfg in channels]
+        links += [int(cfg.linkTriggerChannel2) for cfg in channels]
+        modes = [int(trigger.triggerMode) for trigger in triggers]
 
-            def v2b(v: float) -> int:
-                return int(volts_to_bytes(volt=v, dac_bitMax=self.dac_bitMax))
-
-            for channel in range(self.nr_output_channels):
-                cfg = self.channel_configs[channel]
-                program_values_8.append(int(cfg.isBiphasic))
-                program_values_8.append(v2b(cfg.phase1Voltage))
-                program_values_8.append(v2b(cfg.phase2Voltage))
-                program_values_8.append(int(cfg.customTrainID))
-                program_values_8.append(int(cfg.customTrainTarget))
-                program_values_8.append(int(cfg.customTrainLoop))
-                program_values_8.append(v2b(cfg.restingVoltage))
-
-        # Trigger link params: linkTriggerChannel1 per channel, then linkTriggerChannel2
-        program_values_tl = [
-            int(self.channel_configs[ch].linkTriggerChannel1)
-            for ch in range(self.nr_output_channels)
-        ] + [
-            int(self.channel_configs[ch].linkTriggerChannel2)
-            for ch in range(self.nr_output_channels)
-        ]
-
-        # Trigger modes for all trigger channels
-        trigger_modes = [
-            int(self.trigger_configs[ch].triggerMode)
-            for ch in range(self.nr_trigger_channels)
-        ]
-
-        message = [
-            self.encoded_opcode,
-            encode_message(SendMessageHeader.PROGRAM_ALL, encoding=ENCODING_UINT8),
-            encode_message(program_values_32, encoding="uint32"),
-        ]
-        if program_values_16 is not None:
-            message.append(encode_message(program_values_16, encoding="uint16"))
-        message += [
-            encode_message(program_values_8, encoding=ENCODING_UINT8),
-            encode_message(program_values_tl, encoding=ENCODING_UINT8),
-            encode_message(trigger_modes, encoding=ENCODING_UINT8),
-        ]
-        self._arcom.write_array(b"".join(message))
-        return self._read_confirmation()
+        return self._send_and_confirm(
+            SendMessageHeader.PROGRAM_ALL,
+            _u32(cycles),
+            voltages,
+            _u8(channel_bytes + links + modes),
+        )
 
     def set_resting_voltage(self, channel: int, voltage: float) -> bool:
         """Set the resting (idle) voltage on one output channel.
@@ -469,9 +441,7 @@ class PulsePal:
             True if hardware acknowledged the write.
         """
         return self.program_one_param(
-            channel=channel,
-            param_name="restingVoltage",
-            param_value=voltage,
+            channel=channel, param_name="restingVoltage", param_value=voltage
         )
 
     def set_fixed_voltage(self, channel: int, voltage: float) -> bool:
@@ -484,29 +454,20 @@ class PulsePal:
         Returns:
             True if hardware acknowledged the write.
         """
-        voltage_bits = volts_to_bytes(volt=voltage, dac_bitMax=self.dac_bitMax)
-        if self.model == 1:
-            message = [
-                self.encoded_opcode,
-                encode_message(SendMessageHeader.PROGRAM_VOLT, encoding=ENCODING_UINT8),
-                encode_message(channel + 1, encoding=ENCODING_UINT8),
-                encode_message(voltage_bits, encoding=ENCODING_UINT8),
-            ]
-        else:
-            message = [
-                self.encoded_opcode,
-                encode_message(SendMessageHeader.PROGRAM_VOLT, encoding=ENCODING_UINT8),
-                encode_message(channel + 1, encoding=ENCODING_UINT8),
-                encode_message(voltage_bits, encoding="uint16"),
-            ]
-        self._arcom.write_array(b"".join(message))
-        return self._read_confirmation()
+        level = encode_message(self._dac(voltage), encoding=self._voltage_dtype)
+        return self._send_and_confirm(
+            SendMessageHeader.PROGRAM_VOLT, _u8(channel + 1), level
+        )
+
+    # ------------------------------------------------------------------
+    # custom trains
+    # ------------------------------------------------------------------
 
     def upload_custom_pulse_train(
         self,
         pulse_train_id: int,
-        pulse_times: list[float],
-        pulse_voltages: list[float],
+        pulse_times: Sequence[float],
+        pulse_voltages: Sequence[float],
     ) -> bool:
         """Upload a custom pulse train to hardware slot 0 or 1.
 
@@ -518,46 +479,32 @@ class PulsePal:
         Returns:
             True if hardware acknowledged the upload.
         """
-        if pulse_train_id not in (0, 1):
+        if pulse_train_id not in CUSTOM_PULSE_TRAIN_OPCODES:
             raise ValueError(f"pulse_train_id must be 0 or 1, got {pulse_train_id}")
         if len(pulse_times) != len(pulse_voltages):
             raise ValueError("pulse_times and pulse_voltages must have the same length")
 
-        scaled_pulse_times = []
-        scaled_pulse_voltages = []
-        for pulse_time, pulse_voltage in zip(pulse_times, pulse_voltages):
-            scaled_pulse_times.append(pulse_time * self.cycle_frequency)
-            scaled_pulse_voltages.append(
-                volts_to_bytes(volt=pulse_voltage, dac_bitMax=self.dac_bitMax)
-            )
-
-        message = [
-            self.encoded_opcode,
-            encode_message(
-                CUSTOM_PULSE_TRAIN_OPCODES.get(pulse_train_id),
-                encoding=ENCODING_UINT8,
-            ),
-        ]
-        if self.model == 1:
-            message.append(encode_message(0, encoding=ENCODING_UINT8))
-        message += [
-            encode_message(len(scaled_pulse_times), encoding="uint32"),
-            encode_message(scaled_pulse_times, encoding="uint32"),
-            encode_message(
-                scaled_pulse_voltages,
-                encoding=self.param_dtype_lookup.get("phase1Voltage"),
-            ),
-        ]
-        self._arcom.write_array(b"".join(message))
-        return self._read_confirmation()
+        onsets = [t * self.cycle_frequency for t in pulse_times]
+        levels = [self._dac(v) for v in pulse_voltages]
+        # model 1 firmware reads one spare byte before the pulse count
+        spare = _u8(0) if self.model == 1 else b""
+        return self._send_and_confirm(
+            CUSTOM_PULSE_TRAIN_OPCODES[pulse_train_id],
+            spare,
+            _u32(len(onsets)),
+            _u32(onsets),
+            encode_message(levels, encoding=self._voltage_dtype),
+        )
 
     def upload_custom_waveform(
         self,
         pulse_train_id: int,
         pulse_width: float,
-        pulse_voltages: list[float],
+        pulse_voltages: Sequence[float],
     ) -> bool:
         """Upload an evenly-spaced waveform to hardware slot 0 or 1.
+
+        Sample ``i`` starts at ``i * pulse_width``; the upload is a custom pulse train.
 
         Args:
             pulse_train_id: Slot index, 0 or 1.
@@ -567,37 +514,13 @@ class PulsePal:
         Returns:
             True if hardware acknowledged the upload.
         """
-        if pulse_train_id not in (0, 1):
-            raise ValueError(f"pulse_train_id must be 0 or 1, got {pulse_train_id}")
+        voltages = list(pulse_voltages)
+        onsets = [i * pulse_width for i in range(len(voltages))]
+        return self.upload_custom_pulse_train(pulse_train_id, onsets, voltages)
 
-        scaled_pulse_times = []
-        scaled_pulse_voltages = []
-        for pulse_index, pulse_voltage in enumerate(pulse_voltages):
-            pulse_time = pulse_index * pulse_width * self.cycle_frequency
-            scaled_pulse_times.append(pulse_time)
-            scaled_pulse_voltages.append(
-                volts_to_bytes(volt=pulse_voltage, dac_bitMax=self.dac_bitMax)
-            )
-
-        message = [
-            self.encoded_opcode,
-            encode_message(
-                CUSTOM_PULSE_TRAIN_OPCODES.get(pulse_train_id),
-                encoding=ENCODING_UINT8,
-            ),
-        ]
-        if self.model == 1:
-            message.append(encode_message(0, encoding=ENCODING_UINT8))
-        message += [
-            encode_message(len(scaled_pulse_times), encoding="uint32"),
-            encode_message(scaled_pulse_times, encoding="uint32"),
-            encode_message(
-                scaled_pulse_voltages,
-                encoding=self.param_dtype_lookup.get("phase1Voltage"),
-            ),
-        ]
-        self._arcom.write_array(b"".join(message))
-        return self._read_confirmation()
+    # ------------------------------------------------------------------
+    # output control
+    # ------------------------------------------------------------------
 
     def set_continuous(self, channel: int, state: int) -> bool:
         """Enable or disable continuous output mode on one channel.
@@ -609,14 +532,9 @@ class PulsePal:
         Returns:
             True if hardware acknowledged the write.
         """
-        message = [
-            self.encoded_opcode,
-            encode_message(SendMessageHeader.CONTINUOUS, encoding=ENCODING_UINT8),
-            encode_message(channel + 1, encoding=ENCODING_UINT8),
-            encode_message(state, encoding=ENCODING_UINT8),
-        ]
-        self._arcom.write_array(b"".join(message))
-        return self._read_confirmation()
+        return self._send_and_confirm(
+            SendMessageHeader.CONTINUOUS, _u8(channel + 1), _u8(state)
+        )
 
     def set_logic(self, channel: int, level: int) -> bool:
         """Set Arduino digital logic level on an output channel (model 2, opcode 86).
@@ -625,14 +543,9 @@ class PulsePal:
             channel: 0-indexed output channel.
             level: Logic level: 0 or 1.
         """
-        message = [
-            self.encoded_opcode,
-            encode_message(SendMessageHeader.LOGIC_SET, encoding=ENCODING_UINT8),
-            encode_message(channel + 1, encoding=ENCODING_UINT8),
-            encode_message(level, encoding=ENCODING_UINT8),
-        ]
-        self._arcom.write_array(b"".join(message))
-        return self._read_confirmation()
+        return self._send_and_confirm(
+            SendMessageHeader.LOGIC_SET, _u8(channel + 1), _u8(level)
+        )
 
     def get_logic(self, channel: int) -> int:
         """Read current Arduino digital logic level on an output channel (opcode 87).
@@ -643,12 +556,7 @@ class PulsePal:
         Returns:
             Logic level: 0 or 1.
         """
-        message = [
-            self.encoded_opcode,
-            encode_message(SendMessageHeader.LOGIC_GET, encoding=ENCODING_UINT8),
-            encode_message(channel + 1, encoding=ENCODING_UINT8),
-        ]
-        self._arcom.write_array(b"".join(message))
+        self._send(SendMessageHeader.LOGIC_GET, _u8(channel + 1))
         return self._arcom.read_uint8()
 
     def trigger_selected_channels(
@@ -666,29 +574,24 @@ class PulsePal:
             channel_3: Trigger channel 3.
             channel_4: Trigger channel 4.
         """
-        combination_byte = (
-            (1 * channel_1) + (2 * channel_2) + (4 * channel_3) + (8 * channel_4)
-        )
-        message = [
-            self.encoded_opcode,
-            encode_message(SendMessageHeader.SOFT_TRIGGER, encoding=ENCODING_UINT8),
-            encode_message(combination_byte, encoding=ENCODING_UINT8),
-        ]
-        self._arcom.write_array(b"".join(message))
+        selected = (channel_1, channel_2, channel_3, channel_4)
+        mask = 0
+        for bit, on in enumerate(selected):
+            if on:
+                mask |= 1 << bit
+        self._send(SendMessageHeader.SOFT_TRIGGER, _u8(mask))
 
     def trigger_all_channels(self):
         """Software-trigger all four output channels simultaneously."""
-        return self.trigger_selected_channels(
-            channel_1=True, channel_2=True, channel_3=True, channel_4=True
-        )
+        return self.trigger_selected_channels(True, True, True, True)
 
     def stop_all_outputs(self):
         """Abort all currently running pulse train outputs."""
-        message = [
-            self.encoded_opcode,
-            encode_message(SendMessageHeader.ABORT_ALL, encoding=ENCODING_UINT8),
-        ]
-        self._arcom.write_array(b"".join(message))
+        self._send(SendMessageHeader.ABORT_ALL)
+
+    # ------------------------------------------------------------------
+    # storage
+    # ------------------------------------------------------------------
 
     def save_settings(self) -> bool:
         """Send disconnect opcode (81) to save current params on device.
@@ -703,11 +606,7 @@ class PulsePal:
                 return False
         except Exception:
             return False
-        message = [
-            self.encoded_opcode,
-            encode_message(SendMessageHeader.DISCONNECT, encoding=ENCODING_UINT8),
-        ]
-        self._arcom.write_array(b"".join(message))
+        self._send(SendMessageHeader.DISCONNECT)
         return True
 
     def save_to_sd(self, filename: str = "default.pps") -> None:
@@ -719,14 +618,14 @@ class PulsePal:
         if self._arcom is None:
             return
         name_bytes = filename.encode("ascii")
-        msg = (
-            self.encoded_opcode
-            + encode_message(SendMessageHeader.SETTINGS, encoding=ENCODING_UINT8)
-            + encode_message(1, encoding=ENCODING_UINT8)
-            + encode_message(len(name_bytes), encoding=ENCODING_UINT8)
-            + name_bytes
+        self._arcom.serial_object.write(
+            self._frame(
+                SendMessageHeader.SETTINGS,
+                _u8(SD_SAVE),
+                _u8(len(name_bytes)),
+                name_bytes,
+            )
         )
-        self._arcom.serial_object.write(msg)
         time.sleep(0.1)
 
     def read_sd_params(self) -> dict | None:
@@ -750,50 +649,36 @@ class PulsePal:
         """
         if self._arcom is None:
             return None
-        msg = self.encoded_opcode + encode_message(
-            SendMessageHeader.READ_SD, encoding=ENCODING_UINT8
-        )
-        self._arcom.serial_object.write(msg)
+        self._arcom.serial_object.write(self._frame(SendMessageHeader.READ_SD))
         time.sleep(0.1)
         raw = self._arcom.serial_object.read(178)
 
         if len(raw) != 178:
             return None
 
-        time_names = [
-            "phase1Duration",
-            "interPhaseInterval",
-            "phase2Duration",
-            "interPulseInterval",
-            "burstDuration",
-            "interBurstInterval",
-            "pulseTrainDuration",
-            "pulseTrainDelay",
-        ]
-        result: dict = {n: [] for n in time_names}
-        for n in ("phase1Voltage", "phase2Voltage", "restingVoltage"):
-            result[n] = []
-        for n in (
+        byte_names = (
             "isBiphasic",
             "customTrainID",
             "customTrainTarget",
             "customTrainLoop",
-        ):
-            result[n] = []
+        )
+        result: dict = {
+            name: [] for name in (*TIME_PARAMS, *VOLTAGE_PARAMS, *byte_names)
+        }
         result["triggerMode"] = []
         result["triggerAddress"] = []
 
         offset = 0
         for _ in range(4):
-            for name in time_names:
+            for name in TIME_PARAMS:
                 (cycles,) = struct.unpack_from("<I", raw, offset)
                 result[name].append(cycles / PULSEPAL_CYCLE_FREQUENCY)
                 offset += 4
             result["isBiphasic"].append(raw[offset])
             offset += 1
-            for name in ("phase1Voltage", "phase2Voltage", "restingVoltage"):
-                (bits,) = struct.unpack_from("<H", raw, offset)
-                result[name].append(round((bits / 65535.0) * 20.0 - 10.0, 4))
+            for name in VOLTAGE_PARAMS:
+                (code,) = struct.unpack_from("<H", raw, offset)
+                result[name].append(round((code / 65535.0) * V_SPAN + V_MIN, 4))
                 offset += 2
             result["customTrainID"].append(raw[offset])
             result["customTrainTarget"].append(raw[offset + 1])

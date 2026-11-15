@@ -25,6 +25,7 @@ from pypulsepal import PulsePal
 | `config` | `PulsePalConfig` | Snapshot of current in-memory state (property) |
 | `firmware_version` | int | Detected firmware version |
 | `model` | int | Hardware model: 1 or 2 |
+| `dac_max` | int | Full-scale DAC code: 255 on model 1, 65535 on model 2 |
 
 ### Upload methods
 

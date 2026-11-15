@@ -150,6 +150,12 @@ class TestTriggerSelectedChannels:
         msg = arcom.write_array.call_args[0][0]
         assert bytes([0]) in msg
 
+    @pytest.mark.parametrize("mask", range(16))
+    def test_mask_bit_per_channel(self, pp, arcom, mask):
+        arcom.write_array.reset_mock()
+        pp.trigger_selected_channels(*(bool(mask & (1 << bit)) for bit in range(4)))
+        assert arcom.write_array.call_args[0][0] == bytes([213, 77, mask])
+
     def test_contains_soft_trigger_opcode(self, pp, arcom):
         arcom.write_array.reset_mock()
         pp.trigger_selected_channels(channel_1=True)
@@ -271,6 +277,15 @@ class TestUploadCustomWaveform:
             pulse_train_id=0, pulse_width=0.001, pulse_voltages=[5.0]
         )
         arcom.write_array.assert_called_once()
+
+    def test_same_message_as_pulse_train(self, pp, arcom):
+        voltages = [5.0, 3.0, 0.0, -3.0, -5.0]
+        pp.upload_custom_waveform(
+            pulse_train_id=1, pulse_width=0.002, pulse_voltages=voltages
+        )
+        waveform = arcom.write_array.call_args[0][0]
+        pp.upload_custom_pulse_train(1, [i * 0.002 for i in range(5)], voltages)
+        assert arcom.write_array.call_args[0][0] == waveform
 
 
 # ---------------------------------------------------------------------------

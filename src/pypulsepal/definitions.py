@@ -1,180 +1,140 @@
-# https://sites.google.com/site/pulsepalwiki/matlab-gnu-octave/functions/programpulsepalparam
-PARAM_CODES = {
-    1: "isBiphasic",
-    2: "phase1Voltage",
-    3: "phase2Voltage",
-    4: "phase1Duration",
-    5: "interPhaseInterval",
-    6: "phase2Duration",
-    7: "interPulseInterval",
-    8: "burstDuration",
-    9: "interBurstInterval",
-    10: "pulseTrainDuration",
-    11: "pulseTrainDelay",
-    12: "linkTriggerChannel1",
-    13: "linkTriggerChannel2",
-    14: "customTrainID",
-    15: "customTrainTarget",
-    16: "customTrainLoop",
-    17: "restingVoltage",
-    128: "triggerMode",
-}
-PARAM_NAMES = {v: k for k, v in PARAM_CODES.items()}
-CHANNEL_PARAM_TEST = {
-    "isBiphasic": False,
-    "phase1Voltage": 1.85,
-    "phase2Voltage": -2.45,
-    "phase1Duration": 0.029,
-    "interPhaseInterval": 0.251,
-    "phase2Duration": 0.051,
-    "interPulseInterval": 0.111,
-    "burstDuration": 1.1,
-    "interBurstInterval": 2.66,
-    "pulseTrainDuration": 4.55,
-    "pulseTrainDelay": 0.444,
-    "linkTriggerChannel1": 0,
-    "linkTriggerChannel2": 1,
-    "customTrainID": 0,
-    "customTrainTarget": 0,
-    "customTrainLoop": 0,
-    "restingVoltage": 4.99,
-    "triggerMode": 1,  # not a channel param
-}
-TRIGGER_PARAM_TEST = {
-    "triggerMode": 2,
-}
-TRIGGER_MODE_VALUES = {
-    0: "normal",
-    1: "toggle",
-    2: "gated",
-}
-TRIGGER_MODE_NAMES = {v: k for k, v in TRIGGER_MODE_VALUES.items()}
-# TYPES:
-#   volt @ [2,3,17] -> "uint16",
-#   ELIF [4-11] -> "uint32",
-#   ELSE (for 1/biphasic, [12-16]/custom*, 128/triggerMode) -> "uint8"
-PARAM_DTYPE_MODEL_1 = {
-    "isBiphasic": "uint8",
-    "phase1Voltage": "uint8",  # v1: uint8
-    "phase2Voltage": "uint8",  # v1: uint8
-    "phase1Duration": "uint32",  # param 4
-    "interPhaseInterval": "uint32",
-    "phase2Duration": "uint32",
-    "interPulseInterval": "uint32",
-    "burstDuration": "uint32",
-    "interBurstInterval": "uint32",
-    "pulseTrainDuration": "uint32",
-    "pulseTrainDelay": "uint32",
-    "linkTriggerChannel1": "uint8",
-    "linkTriggerChannel2": "uint8",
-    "customTrainID": "uint8",
-    "customTrainTarget": "uint8",
-    "customTrainLoop": "uint8",
-    "restingVoltage": "uint8",  # v1: uint8, param: 17
-    "triggerMode": "uint8",  # parma 128
-}
-PARAM_DTYPE_MODEL_2 = {
-    "isBiphasic": "uint8",
-    "phase1Voltage": "uint16",  # v1: uint8
-    "phase2Voltage": "uint16",
-    "phase1Duration": "uint32",  # param 4
-    "interPhaseInterval": "uint32",
-    "phase2Duration": "uint32",
-    "interPulseInterval": "uint32",
-    "burstDuration": "uint32",
-    "interBurstInterval": "uint32",
-    "pulseTrainDuration": "uint32",
-    "pulseTrainDelay": "uint32",
-    "linkTriggerChannel1": "uint8",
-    "linkTriggerChannel2": "uint8",
-    "customTrainID": "uint8",
-    "customTrainTarget": "uint8",
-    "customTrainLoop": "uint8",
-    "restingVoltage": "uint16",  # v1: uint8, param: 17
-    "triggerMode": "uint8",  # parma 128
-}
+"""Constants of the PulsePal USB serial protocol.
+
+Sources:
+    https://sites.google.com/site/pulsepalwiki/usb-serial-interface/usb-interface-v2-x
+    https://sites.google.com/site/pulsepalwiki/usb-serial-interface/usb-interface-v1-x
+    https://sites.google.com/site/pulsepalwiki/parameter-guide
+"""
+
+#: Hardware timer rate: one cycle is 50 us, so time values are sent as cycles.
 PULSEPAL_CYCLE_FREQUENCY = 20000
-VOLTAGE_PARAM_NAMES = {"phase1Voltage", "phase2Voltage", "restingVoltage"}
+
+#: Firmware builds from this number on are model 2 hardware (16-bit DAC).
+MODEL_2_MIN_FIRMWARE = 20
+
+#: Full-scale DAC code per hardware model; 0 is -10 V and the maximum is +10 V.
+DAC_MAX = {1: 255, 2: 65535}
+
+#: Six characters sent with the client ID opcode, shown on the device display.
+CLIENT_NAME = b"PYTHON"
+
+#: Output channel parameters in code order: the parameter code is the position + 1.
+_CHANNEL_PARAMS = (
+    "isBiphasic",
+    "phase1Voltage",
+    "phase2Voltage",
+    "phase1Duration",
+    "interPhaseInterval",
+    "phase2Duration",
+    "interPulseInterval",
+    "burstDuration",
+    "interBurstInterval",
+    "pulseTrainDuration",
+    "pulseTrainDelay",
+    "linkTriggerChannel1",
+    "linkTriggerChannel2",
+    "customTrainID",
+    "customTrainTarget",
+    "customTrainLoop",
+    "restingVoltage",
+)
+TRIGGER_MODE_PARAM_CODE = 128
+
+PARAM_CODES = dict(enumerate(_CHANNEL_PARAMS, start=1))
+PARAM_CODES[TRIGGER_MODE_PARAM_CODE] = "triggerMode"
+PARAM_NAMES = {name: code for code, name in PARAM_CODES.items()}
+
+#: Codes 4 to 11: durations, 32-bit cycle counts, in program-all order.
+TIME_PARAMS = tuple(PARAM_CODES[code] for code in range(4, 12))
+#: Codes 2, 3 and 17: voltages as DAC codes, in program-all order.
+VOLTAGE_PARAMS = tuple(PARAM_CODES[code] for code in (2, 3, 17))
+VOLTAGE_PARAM_NAMES = set(VOLTAGE_PARAMS)
+
+TRIGGER_MODE_VALUES = {0: "normal", 1: "toggle", 2: "gated"}
+TRIGGER_MODE_NAMES = {name: value for value, name in TRIGGER_MODE_VALUES.items()}
+
+
+def _wire_dtypes(voltage_dtype: str) -> dict[str, str]:
+    """Wire dtype per parameter: times uint32, voltages per model, the rest uint8."""
+    dtypes = {}
+    for name in PARAM_NAMES:
+        if name in TIME_PARAMS:
+            dtypes[name] = "uint32"
+        elif name in VOLTAGE_PARAM_NAMES:
+            dtypes[name] = voltage_dtype
+        else:
+            dtypes[name] = "uint8"
+    return dtypes
+
+
+PARAM_DTYPE_MODEL_1 = _wire_dtypes("uint8")
+PARAM_DTYPE_MODEL_2 = _wire_dtypes("uint16")
+PARAM_DTYPES = {1: PARAM_DTYPE_MODEL_1, 2: PARAM_DTYPE_MODEL_2}
+
+#: Factor from natural units to wire units; voltages are converted separately.
 PARAM_SCALING = {
-    "isBiphasic": 1,
-    "phase1Voltage": 1,
-    "phase2Voltage": 1,
-    "phase1Duration": PULSEPAL_CYCLE_FREQUENCY,  # param 4
-    "interPhaseInterval": PULSEPAL_CYCLE_FREQUENCY,
-    "phase2Duration": PULSEPAL_CYCLE_FREQUENCY,
-    "interPulseInterval": PULSEPAL_CYCLE_FREQUENCY,
-    "burstDuration": PULSEPAL_CYCLE_FREQUENCY,
-    "interBurstInterval": PULSEPAL_CYCLE_FREQUENCY,
-    "pulseTrainDuration": PULSEPAL_CYCLE_FREQUENCY,
-    "pulseTrainDelay": PULSEPAL_CYCLE_FREQUENCY,  # param 11
-    "linkTriggerChannel1": 1,
-    "linkTriggerChannel2": 1,
-    "customTrainID": 1,
-    "customTrainTarget": 1,
-    "customTrainLoop": 1,
-    "restingVoltage": 1,  # param: 17
-    "triggerMode": 1,  # parma 128
+    name: PULSEPAL_CYCLE_FREQUENCY if name in TIME_PARAMS else 1 for name in PARAM_NAMES
 }
 
 
 class SendMessageHeader:
-    """Opcode constants for messages sent from host to PulsePal over serial.
+    """Opcodes sent from host to device, each after the prefix byte 213.
 
     See: https://sites.google.com/site/pulsepalwiki/usb-serial-interface/usb-interface-v2-x
     """
 
-    HANDSHAKE = "H"  # "H" == chr(72)
-
-    PROGRAM_ALL = 73
-    PROGRAM_ONE = 74  # next: param code, then channel, then time/voltage
-    PROGRAM_CUSTOM_1 = 75
+    HANDSHAKE = "H"  # opcode 72
+    PROGRAM_ALL = 73  # every parameter of every channel in one block
+    PROGRAM_ONE = 74  # param code, channel (1-4), value
+    PROGRAM_CUSTOM_1 = 75  # pulse count, times, voltages
     PROGRAM_CUSTOM_2 = 76
-    SOFT_TRIGGER = 77
+    SOFT_TRIGGER = 77  # one byte, bit n selects output channel n + 1
     DISPLAY = 78
-    PROGRAM_VOLT = 79
-
+    PROGRAM_VOLT = 79  # channel, DAC code
     ABORT_ALL = 80
-    DISCONNECT = 81
-
-    CONTINUOUS = 82  # channel, state
-
-    CLIENT_ID = 89  # 6 char, e.g. python/matlab
-
+    DISCONNECT = 81  # also stores the current parameters on the device
+    CONTINUOUS = 82  # channel, 0 or 1
     READ_SD = 85
-
-    SETTINGS = 90
-
-    LOGIC_SET = 86
-    LOGIC_GET = 87
+    LOGIC_SET = 86  # line, level
+    LOGIC_GET = 87  # line; device replies with the level
+    CLIENT_ID = 89  # six ASCII characters
+    SETTINGS = 90  # SD settings file: op, name length, name
 
 
 class ReceiveMessageHeader:
-    """Opcode constants for messages received from PulsePal over serial.
+    """Replies sent from device to host.
 
     See: https://sites.google.com/site/pulsepalwiki/usb-serial-interface/usb-interface-v2-x
     """
 
-    HANDSHAKE_OK = "K"  # "K" == chr(75)  # + 32-bit int for firmware version
-
-    PROGRAM_ALL_OK = 1
-    PROGRAM_ONE_OK = 1
+    HANDSHAKE_OK = "K"  # followed by the firmware build as uint32
+    ACK = 1
 
 
+#: Custom train slot (0 or 1) to its upload opcode.
 CUSTOM_PULSE_TRAIN_OPCODES = {
     0: SendMessageHeader.PROGRAM_CUSTOM_1,
     1: SendMessageHeader.PROGRAM_CUSTOM_2,
 }
 
+#: Operation byte of the SETTINGS opcode that writes the settings file.
+SD_SAVE = 1
 
-def resolve_param_name_code_pair(param_name_or_code=None):
-    """Expect parameter name or code (integer) and return both name and code"""
-    param_name = param_code = param_name_or_code
+
+def resolve_param_name_code_pair(param_name_or_code=None) -> tuple[str, int]:
+    """Return ``(name, code)`` for a parameter given by either one.
+
+    Raises:
+        ValueError: for an unknown name or code, or a value of another type.
+    """
+    name: str | None
+    code: int | None
     if isinstance(param_name_or_code, str):
-        param_code = PARAM_NAMES.get(param_name_or_code)
+        name, code = param_name_or_code, PARAM_NAMES.get(param_name_or_code)
     elif isinstance(param_name_or_code, int):
-        param_name = PARAM_CODES.get(param_name_or_code)
+        name, code = PARAM_CODES.get(param_name_or_code), param_name_or_code
     else:
-        raise ValueError(param_name_or_code)
-
-    assert param_name is not None and param_code is not None
-    return param_name, param_code
+        name = code = None
+    if name is None or code is None:
+        raise ValueError(f"unknown PulsePal parameter {param_name_or_code!r}")
+    return name, code

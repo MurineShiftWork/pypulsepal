@@ -123,7 +123,7 @@ def run(port):
     pp = PulsePal(serial_port=port, baudrate=115200)
     print(
         f"Connected: model={pp.model}  firmware={pp.firmware_version}"
-        f"  dac_bitMax={pp.dac_bitMax}"
+        f"  dac_max={pp.dac_max}"
     )
 
     _drain(pp)
