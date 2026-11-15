@@ -12,7 +12,7 @@ from pypulsepal.pulsepal import PulsePal
 def _make_pp(config: PulsePalConfig | None = None, firmware_version: int = 21):
     """Construct a PulsePal with a mocked serial connection.
 
-    firmware_version=21 → model 2, no v20 bug-warning noise.
+    firmware_version=21 gives model 2.
     Returns (pp, mock_arcom). The patch exits after construction; pp._arcom
     remains the mock, so subsequent method calls on pp work without re-patching.
     """
@@ -51,8 +51,8 @@ class TestInit:
     def test_firmware_version_stored(self, pp):
         assert pp.firmware_version == 21
 
-    def test_dac_bitmax_model2(self, pp):
-        assert pp.dac_bitMax == 65535
+    def test_dac_max_model2(self, pp):
+        assert pp.dac_max == 65535
 
     def test_channel_configs_count(self, pp):
         assert len(pp.channel_configs) == 4
@@ -71,7 +71,7 @@ class TestInit:
     def test_model1_detected(self):
         pp, _ = _make_pp(firmware_version=10)
         assert pp.model == 1
-        assert pp.dac_bitMax == 255
+        assert pp.dac_max == 255
 
 
 class TestConfigProperty:

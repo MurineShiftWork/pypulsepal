@@ -7,7 +7,7 @@ Usage:
 
 What it tests:
     1. ArCOM open + handshake (firmware version, model detection)
-    2. encode_message / volts_to_bytes encoding sanity (no serial)
+    2. encode_message / volts_to_dac encoding sanity (no serial)
     3. program_one_param — ack + local bookkeeping
     4. sync_all_params (bulk upload, opcode 73) — ack
     5. Device read-back via opcode 85 (reads SD card file, NOT RAM)
@@ -45,19 +45,19 @@ def run(port):
     from pypulsepal.models import ChannelConfig
 
     pp = PulsePal(serial_port=port)
-    info = f"model={pp.model}  fw={pp.firmware_version}  dac_bitMax={pp.dac_bitMax}"
+    info = f"model={pp.model}  fw={pp.firmware_version}  dac_max={pp.dac_max}"
     _check(info, pp.model is not None and pp.firmware_version is not None)
 
     # ------------------------------------------------------------------
     # 2. Encoding sanity (no serial)
     # ------------------------------------------------------------------
     print("\n2. Encoding sanity (no serial)")
-    from pypulsepal.utils import encode_message, volts_to_bytes
+    from pypulsepal.utils import encode_message, volts_to_dac
 
-    v = int(volts_to_bytes(volt=0.0, dac_bitMax=65535))
+    v = volts_to_dac(0.0, 65535)
     _check(f"0V → {v} (expected 32768)", v == 32768)
 
-    v = int(volts_to_bytes(volt=10.0, dac_bitMax=65535))
+    v = volts_to_dac(10.0, 65535)
     _check(f"+10V → {v} (expected 65535)", v == 65535)
 
     b = encode_message(213, encoding="uint8")

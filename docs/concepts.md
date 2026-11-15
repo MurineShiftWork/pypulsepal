@@ -12,9 +12,6 @@ PyPulsePal supports both PulsePal hardware generations. The model is detected au
 | SD card | No | Yes (opcode 90) |
 | Digital logic | No | Yes (opcodes 86/87) |
 
-!!! warning "Firmware v20 bug"
-    Firmware version exactly 20 has a known bug in Pulse Gated trigger mode when used with multiple inputs. Update firmware if possible. PyPulsePal logs a warning on connection.
-
 ## Channel configuration
 
 Each of the 4 output channels is described by a `ChannelConfig` Pydantic model. All fields are validated on assignment.
